@@ -23,6 +23,20 @@
 
 启动器内自带「检查更新」（设置页 / 左下角版本徽章点击），有新版本可一键自动更新。
 
+> ### 🌐 受限网络用户（github.com 直连不通，如部分国内网络）
+>
+> 软件内「检查更新」会自动走 GitHub 加速镜像，但 **v1.2.0 及更早版本**的
+> 更新下载可能因直连失败而无法完成。请任选其一：
+>
+> 1. **软件内开启代理**：设置 → 网络 → 开启「代理」并填写本地代理地址
+>    （如 `http://127.0.0.1:7897`），再重新检查更新；
+> 2. **手动下载**（浏览器走系统代理即可）：
+>    - Releases 页面：<https://github.com/PixelForgeLablbm-tech/ComfyUIBM_Launcher/releases>
+>    - 或加速直链（复制到浏览器地址栏，把 `v1.2.1` 换成最新版本号）：
+>      `https://gh-proxy.com/https://github.com/PixelForgeLablbm-tech/ComfyUIBM_Launcher/releases/download/v1.2.1/ComfyUIBM_Launcher.exe`
+>
+> 升到 **v1.2.1 及以上**后，更新下载自动走镜像，不再依赖直连。
+
 ---
 
 ## 功能

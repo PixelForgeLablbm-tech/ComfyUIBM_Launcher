@@ -35,8 +35,10 @@ RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.1
 - **修复：更新替换更稳健**：替换失败会写错误日志并保留旧版，
   成功时自动清理旧版 onedir 残留
 - **受限网络用户提示**：若软件内更新下载失败，可在「设置 → 网络」开启
-  代理后重试；或手动下载：
+  代理后重试；或手动下载（浏览器走系统代理）：
   https://github.com/PixelForgeLablbm-tech/ComfyUIBM_Launcher/releases
+  加速直链（把 v1.2.1 换成最新版本号）：
+  https://gh-proxy.com/https://github.com/PixelForgeLablbm-tech/ComfyUIBM_Launcher/releases/download/v1.2.1/ComfyUIBM_Launcher.exe
 
 ### v1.2.0 更新内容（内核维护全面升级）
 - **事务式安装**：Torch / xformers / SageAttention / llama-cpp / Triton 全部改为
