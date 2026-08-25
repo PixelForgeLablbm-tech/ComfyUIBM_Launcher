@@ -222,15 +222,25 @@ class SettingsTab(QWidget):
         def on_done(path):
             dlg.close()
             exe = Path(sys.executable).resolve()
+            exe_dir = exe.parent
+            err_log = Path(tempfile.gettempdir()) / "ComfyUIBM_update_err.log"
             bat = Path(tempfile.gettempdir()) / "ComfyUIBM_update.bat"
             bat.write_text(
                 "@echo off\r\n"
                 "timeout /t 2 /nobreak >nul\r\n"
                 f'copy /y "{path}" "{exe}" >nul\r\n'
+                "if errorlevel 1 (\r\n"
+                f'  echo UPDATE_COPY_FAILED {path} >> "{err_log}"\r\n'
+                f'  start "" "{exe}"\r\n'
+                f'  del "{path}" >nul\r\n'
+                '  del "%~f0" >nul\r\n'
+                "  exit /b 1\r\n"
+                ")\r\n"
                 f'del "{path}" >nul\r\n'
+                f'if exist "{exe_dir}\\_internal" rmdir /s /q "{exe_dir}\\_internal" >nul\r\n'
                 f'start "" "{exe}"\r\n'
                 'del "%~f0" >nul\r\n',
-                encoding="gbk", errors="replace")
+                encoding="ascii", errors="replace")
             subprocess.Popen(
                 ["cmd", "/c", "start", "", "/b", str(bat)],
                 creationflags=0x08000000 if os.name == "nt" else 0)

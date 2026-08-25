@@ -25,9 +25,18 @@ USER = "PixelForgeLablbm-tech"
 REPO = "ComfyUIBM_Launcher"
 API = "https://api.github.com"
 
-RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.0
+RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.1
 
 基于 Python + PyQt5 的 ComfyUI 本地管理工具。
+
+### v1.2.1 更新内容（修复更新下载）
+- **修复：更新文件下载走 GitHub 加速镜像**：直连 github.com 不通的网络
+  （如部分国内网络）也能正常下载更新，失败自动重试镜像
+- **修复：更新替换更稳健**：替换失败会写错误日志并保留旧版，
+  成功时自动清理旧版 onedir 残留
+- **受限网络用户提示**：若软件内更新下载失败，可在「设置 → 网络」开启
+  代理后重试；或手动下载：
+  https://github.com/PixelForgeLablbm-tech/ComfyUIBM_Launcher/releases
 
 ### v1.2.0 更新内容（内核维护全面升级）
 - **事务式安装**：Torch / xformers / SageAttention / llama-cpp / Triton 全部改为

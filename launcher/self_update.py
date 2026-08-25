@@ -86,19 +86,37 @@ def asset_url(info: dict, name: str):
 
 
 def download(url: str, dest, mirrors: dict = None, progress=None):
-    """流式下载到 dest；progress(done_bytes, total_bytes) 回调。"""
+    """流式下载到 dest；progress(done_bytes, total_bytes) 回调。
+
+    直连失败时若开启 GitHub 加速则走镜像重试（与 check_latest 一致）。
+    """
+    mirrors = mirrors or {}
     proxies = _proxies(mirrors)
-    with requests.get(url, stream=True, timeout=60, proxies=proxies,
-                      headers={"User-Agent": "ComfyUIBM-Launcher"}) as r:
-        r.raise_for_status()
-        total = int(r.headers.get("content-length") or 0)
-        done = 0
-        with open(dest, "wb") as f:
-            for chunk in r.iter_content(1 << 16):
-                if not chunk:
-                    continue
-                f.write(chunk)
-                done += len(chunk)
-                if progress:
-                    progress(done, total)
-    return dest
+    urls = [url]
+    if url.startswith("https://github.com/"):
+        prefix = (mirrors.get("gh_proxy_prefix") or "").strip().rstrip("/")
+        if mirrors.get("gh_proxy") and prefix:
+            urls.append(f"{prefix}/{url}")
+
+    headers = {"User-Agent": "ComfyUIBM-Launcher"}
+    last_err = None
+    for u in urls:
+        try:
+            with requests.get(u, stream=True, timeout=60, proxies=proxies,
+                              headers=headers) as r:
+                r.raise_for_status()
+                total = int(r.headers.get("content-length") or 0)
+                done = 0
+                with open(dest, "wb") as f:
+                    for chunk in r.iter_content(1 << 16):
+                        if not chunk:
+                            continue
+                        f.write(chunk)
+                        done += len(chunk)
+                        if progress:
+                            progress(done, total)
+            return dest
+        except requests.RequestException as e:
+            last_err = e
+            continue
+    raise last_err or RuntimeError(f"下载失败: {url}")
