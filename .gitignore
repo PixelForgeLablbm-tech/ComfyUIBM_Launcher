@@ -1,0 +1,27 @@
+# 测试依赖与缓存（由 tests/fetch_deps.py 生成）
+.smoke_deps/
+.smoke_deps2/
+.wheels/
+.wheels2/
+.pip_tmp/
+pip_out.log
+.logic_test_tmp/
+.ui_check_tmp/
+.btn_tmp/
+.smoke_tmp/
+screen_shot.png
+
+# PyInstaller 打包产物
+build/
+dist/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+
+# 工具/运行时产物
+.gh_cli/
+.workbuddy/
+uninstaller_dist/
+app_run.log
