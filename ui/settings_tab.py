@@ -52,8 +52,9 @@ class SettingsTab(QWidget):
         ):
             self.cb_dpi.addItem(label, val)
         f.addRow("DPI 缩放:", self.cb_dpi)
-        tip_dpi = QLabel("DPI 缩放需重启启动器后生效。")
+        tip_dpi = QLabel("选择后自动保存，重启启动器后生效；若缩放过大导致窗口超出屏幕，会自动恢复。")
         tip_dpi.setProperty("dim", True)
+        tip_dpi.setWordWrap(True)
         f.addRow("", tip_dpi)
         tip_tray = QLabel("点窗口 × 会直接退出软件，并自动停止正在运行的 ComfyUI（不留后台）。")
         tip_tray.setProperty("dim", True)
@@ -137,6 +138,44 @@ class SettingsTab(QWidget):
         self.cb_proxy.toggled.connect(self.ed_proxy.setEnabled)
         # 主题切换即时生效，无需点「保存设置」
         self.cb_theme.currentIndexChanged.connect(self._on_theme_changed)
+        # DPI 缩放选择即自动保存（重启后生效），无需点「保存设置」
+        self.cb_dpi.currentIndexChanged.connect(self._on_dpi_changed)
+
+    def _on_dpi_changed(self, _idx):
+        """DPI 缩放：选择即保存；提供立即重启，避免选错后界面过大无法操作。"""
+        from PyQt5.QtWidgets import QMessageBox
+        s = self.win.config.settings
+        s["dpi_scaling"] = self.cb_dpi.currentData()
+        if not self.win.config.save():
+            QMessageBox.warning(self, "保存失败", "无法写入配置文件，DPI 设置未生效")
+            return
+        box = QMessageBox(self)
+        box.setWindowTitle("DPI 缩放")
+        box.setIcon(QMessageBox.Question)
+        box.setText(f"DPI 缩放已设为：{self.cb_dpi.currentText()}")
+        box.setInformativeText("重启启动器后生效。要立即重启吗？")
+        btn_restart = box.addButton("立即重启", QMessageBox.AcceptRole)
+        btn_later = box.addButton("稍后", QMessageBox.RejectRole)
+        box.setDefaultButton(btn_later)
+        box.exec_()
+        if box.clickedButton() is btn_restart:
+            self._restart_app()
+        else:
+            self.win.sb("DPI 缩放已保存，重启后生效")
+
+    def _restart_app(self):
+        """重启启动器（不停止 ComfyUI），用于 DPI 等需重启的设置。"""
+        import subprocess
+        import sys
+        if getattr(sys, "frozen", False):
+            subprocess.Popen([sys.executable],
+                             creationflags=0x08000000 if os.name == "nt" else 0)
+        else:
+            subprocess.Popen([sys.executable, "main.py"],
+                             creationflags=0x08000000 if os.name == "nt" else 0)
+        self.win._updating = True          # 关闭时不询问、不停 ComfyUI
+        from PyQt5.QtWidgets import QApplication
+        QApplication.instance().quit()
 
     def _on_theme_changed(self, _idx):
         theme = self.cb_theme.currentData()
