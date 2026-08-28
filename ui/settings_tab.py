@@ -164,9 +164,20 @@ class SettingsTab(QWidget):
             self.win.sb("DPI 缩放已保存，重启后生效")
 
     def _restart_app(self):
-        """重启启动器（不停止 ComfyUI），用于 DPI 等需重启的设置。"""
+        """重启启动器（不停止 ComfyUI），用于 DPI 等需重启的设置。
+        若有重要后台任务（插件下载/更新等）在跑，先确认避免中断。"""
         import subprocess
         import sys
+        from PyQt5.QtWidgets import QApplication, QMessageBox
+        if self.win.tasks.active_warn_count() > 0:
+            ret = QMessageBox.question(
+                self, "确认重启",
+                "当前有后台任务正在运行（如插件下载、版本更新）。\n\n"
+                "立即重启会中断这些任务，确定要重启吗？",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if ret != QMessageBox.Yes:
+                self.win.sb("已取消重启，DPI 将在下次启动生效")
+                return
         if getattr(sys, "frozen", False):
             subprocess.Popen([sys.executable],
                              creationflags=0x08000000 if os.name == "nt" else 0)
@@ -174,7 +185,6 @@ class SettingsTab(QWidget):
             subprocess.Popen([sys.executable, "main.py"],
                              creationflags=0x08000000 if os.name == "nt" else 0)
         self.win._updating = True          # 关闭时不询问、不停 ComfyUI
-        from PyQt5.QtWidgets import QApplication
         QApplication.instance().quit()
 
     def _on_theme_changed(self, _idx):
