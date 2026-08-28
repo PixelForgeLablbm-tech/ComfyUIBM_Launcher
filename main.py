@@ -3,6 +3,7 @@
 
 运行: python main.py
 """
+import os
 import sys
 
 
@@ -14,11 +15,24 @@ def main():
         input("按回车键退出…")
         sys.exit(1)
 
+    # DPI 缩放必须在 QApplication 创建前设置（先读配置，异常时按默认处理）
+    dpi = "auto"
+    try:
+        from launcher.config import Config
+        dpi = str(Config().settings.get("dpi_scaling", "auto") or "auto").strip()
+    except Exception:
+        dpi = "auto"
+
     from PyQt5.QtCore import Qt
     from PyQt5.QtWidgets import QApplication
 
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    if dpi == "off":
+        QApplication.setAttribute(Qt.AA_DisableHighDpiScaling, True)
+    else:
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+        if dpi and dpi != "auto":
+            os.environ["QT_SCALE_FACTOR"] = dpi   # 固定缩放因子
 
     app = QApplication(sys.argv)
     app.setApplicationName("ComfyUIBM启动器")

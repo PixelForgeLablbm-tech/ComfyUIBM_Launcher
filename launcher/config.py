@@ -40,6 +40,7 @@ DEFAULT_SETTINGS = {
     "python_path": "python",        # 默认 Python（实例未指定时使用）
     "default_launch_args": "",      # 兼容旧版：默认启动参数文本
     "theme": "dark",                # 界面主题：dark|light|system
+    "dpi_scaling": "auto",          # DPI 缩放：auto|off|1.0|1.25|1.5|2.0
     "launch": dict(DEFAULT_LAUNCH),
     "mirrors": dict(DEFAULT_MIRRORS),
 }

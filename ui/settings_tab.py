@@ -41,6 +41,20 @@ class SettingsTab(QWidget):
         self.cb_theme.addItem("深色", "dark")
         self.cb_theme.addItem("浅色", "light")
         f.addRow("界面主题:", self.cb_theme)
+        self.cb_dpi = QComboBox()
+        for label, val in (
+            ("自动（跟随系统）", "auto"),
+            ("关闭（禁用高 DPI）", "off"),
+            ("100%", "1.0"),
+            ("125%", "1.25"),
+            ("150%", "1.5"),
+            ("200%", "2.0"),
+        ):
+            self.cb_dpi.addItem(label, val)
+        f.addRow("DPI 缩放:", self.cb_dpi)
+        tip_dpi = QLabel("DPI 缩放需重启启动器后生效。")
+        tip_dpi.setProperty("dim", True)
+        f.addRow("", tip_dpi)
         tip_tray = QLabel("点窗口 × 会直接退出软件，并自动停止正在运行的 ComfyUI（不留后台）。")
         tip_tray.setProperty("dim", True)
         tip_tray.setWordWrap(True)
@@ -111,6 +125,8 @@ class SettingsTab(QWidget):
         self.ed_python.setText(s.get("python_path", "python"))
         idx = self.cb_theme.findData(s.get("theme", "dark"))
         self.cb_theme.setCurrentIndex(max(idx, 0))
+        idx = self.cb_dpi.findData(str(s.get("dpi_scaling", "auto")))
+        self.cb_dpi.setCurrentIndex(max(idx, 0))
         m = self.win.config.mirrors
         idx = self.cb_pypi.findData(m.get("pypi_mirror", "aliyun"))
         self.cb_pypi.setCurrentIndex(max(idx, 0))
@@ -261,6 +277,7 @@ class SettingsTab(QWidget):
         s = self.win.config.settings
         s["python_path"] = self.ed_python.text().strip() or "python"
         theme = self.cb_theme.currentData()
+        s["dpi_scaling"] = self.cb_dpi.currentData()
         m = self.win.config.mirrors
         m["pypi_mirror"] = self.cb_pypi.currentData()
         m["hf_mirror"] = self.cb_hf.isChecked()
