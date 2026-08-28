@@ -7,6 +7,26 @@ from pathlib import Path
 APP_NAME = "ComfyUILauncher"
 
 
+def dpi_scale_factor(dpi_setting: str, system_dpi: int = 96):
+    """把"期望的最终界面缩放"换算成 QT_SCALE_FACTOR 环境变量值。
+
+    QT_SCALE_FACTOR 是**乘数**：实际缩放 = 系统缩放 × QT_SCALE_FACTOR。
+    所以要让最终缩放等于用户选择的值，必须除以系统缩放反算。
+    返回字符串（如 "0.8333"）；auto/off/非法值返回 None（不设置）。
+    """
+    s = str(dpi_setting or "").strip().lower()
+    if s in ("", "auto", "off"):
+        return None
+    try:
+        desired = float(s)
+    except ValueError:
+        return None
+    system_scale = max(int(system_dpi) or 96, 96) / 96.0
+    if desired <= 0 or system_scale <= 0:
+        return None
+    return f"{desired / system_scale:.4f}"
+
+
 def default_config_dir() -> Path:
     """配置文件目录：Windows 用 %APPDATA%，否则用用户主目录。"""
     base = os.environ.get("APPDATA")

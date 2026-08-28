@@ -17,9 +17,18 @@ def main():
 
     # DPI 缩放必须在 QApplication 创建前设置（先读配置，异常时按默认处理）
     dpi = "auto"
+    system_dpi = 96
     try:
-        from launcher.config import Config
-        dpi = str(Config().settings.get("dpi_scaling", "auto") or "auto").strip()
+        from launcher.config import Config, dpi_scale_factor
+        cfg = Config()
+        dpi = str(cfg.settings.get("dpi_scaling", "auto") or "auto").strip()
+        import ctypes
+        try:
+            d = int(ctypes.windll.user32.GetDpiForSystem())
+            if d > 0:
+                system_dpi = d
+        except Exception:
+            pass
     except Exception:
         dpi = "auto"
 
@@ -31,8 +40,10 @@ def main():
     else:
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-        if dpi and dpi != "auto":
-            os.environ["QT_SCALE_FACTOR"] = dpi   # 固定缩放因子
+        factor = dpi_scale_factor(dpi, system_dpi)
+        if factor:
+            # QT_SCALE_FACTOR 是乘数，反算后最终缩放 = 系统缩放 × factor = 用户所选值
+            os.environ["QT_SCALE_FACTOR"] = factor
 
     app = QApplication(sys.argv)
     app.setApplicationName("ComfyUIBM启动器")
