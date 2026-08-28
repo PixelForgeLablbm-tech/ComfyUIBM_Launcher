@@ -35,6 +35,15 @@ def main():
     from PyQt5.QtCore import Qt
     from PyQt5.QtWidgets import QApplication
 
+    # 清理上次更新遗留的旧文件（"改名让位"更新时若旧进程仍锁着 .old 会残留）
+    if getattr(sys, "frozen", False):
+        try:
+            old = sys.executable + ".old"
+            if os.path.exists(old):
+                os.remove(old)
+        except Exception:
+            pass
+
     if dpi == "off":
         QApplication.setAttribute(Qt.AA_DisableHighDpiScaling, True)
     else:

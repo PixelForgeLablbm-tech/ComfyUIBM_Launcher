@@ -293,24 +293,28 @@ class SettingsTab(QWidget):
             err_log = Path(tempfile.gettempdir()) / "ComfyUIBM_update_err.log"
             bat = Path(tempfile.gettempdir()) / "ComfyUIBM_update.bat"
             bat.write_text(
+                # 大厂式"改名让位"更新：不覆盖运行中的 exe（Windows 允许重命名
+                # 运行中的 exe，但不允许覆盖），改名腾位 → 新文件就位 → 删旧文件。
+                # 完全不依赖旧进程何时退出，一次成功。
                 "@echo off\r\n"
-                "timeout /t 3 /nobreak >nul\r\n"
-                f'taskkill /IM "{Path(exe).name}" /F >nul 2>&1\r\n'
-                "timeout /t 1 /nobreak >nul\r\n"
-                "set OK=0\r\n"
-                "for %%i in (1 2 3) do (\r\n"
-                f'  copy /y "{path}" "{exe}" >nul 2>&1\r\n'
-                "  if not errorlevel 1 set OK=1 & goto copied\r\n"
-                "  timeout /t 2 /nobreak >nul\r\n"
+                f'move /y "{exe}" "{exe}.old" >nul 2>&1\r\n'
+                "if errorlevel 1 (\r\n"
+                f'  echo UPDATE_RENAME_FAILED {exe} >> "{err_log}"\r\n'
+                f'  start "" "{exe}"\r\n'
+                f'  del "{path}" >nul 2>&1\r\n'
+                '  del "%~f0" >nul 2>&1\r\n'
+                "  exit /b 1\r\n"
                 ")\r\n"
-                ":copied\r\n"
-                'if "%OK%"=="0" (\r\n'
+                f'copy /y "{path}" "{exe}" >nul 2>&1\r\n'
+                "if errorlevel 1 (\r\n"
+                f'  move /y "{exe}.old" "{exe}" >nul 2>&1\r\n'
                 f'  echo UPDATE_COPY_FAILED {path} >> "{err_log}"\r\n'
                 f'  start "" "{exe}"\r\n'
                 f'  del "{path}" >nul 2>&1\r\n'
                 '  del "%~f0" >nul 2>&1\r\n'
                 "  exit /b 1\r\n"
                 ")\r\n"
+                f'del "{exe}.old" >nul 2>&1\r\n'
                 f'del "{path}" >nul 2>&1\r\n'
                 f'if exist "{exe_dir}\\_internal" rmdir /s /q "{exe_dir}\\_internal" >nul 2>&1\r\n'
                 f'start "" "{exe}"\r\n'
