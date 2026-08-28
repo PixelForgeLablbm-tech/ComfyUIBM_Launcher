@@ -58,9 +58,14 @@ class TaskManager:
 
     def __init__(self):
         self._threads = []
+        self._warn = {}            # thread -> 关闭前是否需提醒
 
-    def start(self, fn, *args, on_done=None, on_error=None, on_progress=None):
+    def start(self, fn, *args, on_done=None, on_error=None, on_progress=None,
+              warn_on_close=True):
+        """warn_on_close=False 的任务（状态轮询/版本检查等秒级任务）
+        在关闭窗口时不弹"后台任务运行中"提醒。"""
         thread = TaskThread(fn, *args)
+        self._warn[thread] = bool(warn_on_close)
         if on_progress:
             thread.progress.connect(on_progress)
         if on_done:
@@ -74,8 +79,13 @@ class TaskManager:
         return thread
 
     def _cleanup(self, thread):
+        self._warn.pop(thread, None)
         if thread in self._threads:
             self._threads.remove(thread)
 
     def active_count(self) -> int:
         return len(self._threads)
+
+    def active_warn_count(self) -> int:
+        """运行中且标记为"关闭需提醒"的任务数。"""
+        return sum(1 for t in self._threads if self._warn.get(t, True))

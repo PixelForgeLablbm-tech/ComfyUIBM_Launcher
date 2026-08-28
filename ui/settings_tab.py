@@ -189,6 +189,7 @@ class SettingsTab(QWidget):
             lambda report, m=mirrors: check_latest(m),
             on_done=done,
             on_error=fail,
+            warn_on_close=False,      # 秒级检查，关闭时无需提醒
         )
 
     def _download_and_apply(self, info):

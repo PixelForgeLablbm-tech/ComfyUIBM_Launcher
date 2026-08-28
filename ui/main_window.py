@@ -376,7 +376,7 @@ class MainWindow(QMainWindow):
             self.statusUpdated.emit(st)
             self._update_topbar(st)
 
-        self.tasks.start(work, on_done=done)
+        self.tasks.start(work, on_done=done, warn_on_close=False)
 
     def _update_topbar(self, st):
         if not st:
@@ -454,7 +454,7 @@ class MainWindow(QMainWindow):
 
         self.tasks.start(
             lambda report, m=mirrors: self_update.check_latest(m),
-            on_done=done, on_error=fail)
+            on_done=done, on_error=fail, warn_on_close=False)
 
     def _on_version_badge_click(self):
         from launcher import self_update
@@ -491,7 +491,7 @@ class MainWindow(QMainWindow):
             # 更新重启：直接退出（不停 ComfyUI，替换的是启动器自身 exe）
             event.accept()
             return
-        if self.tasks.active_count() > 0:
+        if self.tasks.active_warn_count() > 0:
             # 后台任务运行中（安装/更新等）：提醒，避免线程随应用退出被销毁
             box = QMessageBox(self)
             box.setWindowTitle("退出确认")
