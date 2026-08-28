@@ -29,6 +29,16 @@ def _confirm(title: str, text: str) -> bool:
         return True
 
 
+def _kill_running():
+    """结束可能正在运行的启动器进程，否则 exe/_internal 被占用删不掉。"""
+    try:
+        subprocess.run(["taskkill", "/IM", EXE_NAME, "/F"],
+                       capture_output=True, timeout=15,
+                       creationflags=0x08000000 if os.name == "nt" else 0)
+    except Exception:
+        pass
+
+
 def _lnk_paths():
     home = Path.home()
     menu = (Path(os.environ.get("APPDATA", str(home))) /
@@ -64,21 +74,32 @@ def main():
             "个人配置均会保留）"):
         return
 
-    # 1. 删除快捷方式
+    # 1. 结束运行中的启动器（否则文件被占用，删除会静默失败）
+    _kill_running()
+
+    # 2. 删除快捷方式
     for lnk in _lnk_paths():
         try:
             lnk.unlink()
         except OSError:
             pass
 
-    # 2. 精确删除启动器文件（这些未被占用，可立即删）
+    # 3. 精确删除启动器文件；失败要明确报告，不再静默跳过
+    _kill_running()
     shutil.rmtree(install_dir / INTERNAL_DIR, ignore_errors=True)
     try:
         (install_dir / EXE_NAME).unlink()
     except OSError:
         pass
+    if (install_dir / EXE_NAME).exists():
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            f"部分文件无法删除（可能仍被占用）：\n{install_dir}\\{EXE_NAME}\n\n"
+            f"请关闭 {APP_NAME} 后手动删除该目录，或稍后重试卸载。",
+            "卸载未完全完成", 0x0010 | 0x0004)
+        return
 
-    # 3. 延迟删除自身（运行中无法删）+ 清理空目录
+    # 4. 延迟删除自身（运行中无法删）+ 清理空目录
     bat = install_dir / "__uninstall.bat"
     try:
         bat.write_text(make_bat(install_dir),

@@ -50,6 +50,16 @@ def uninstall_source() -> Path:
 
 
 # ---------------------------------------------------------------- 安装线程
+def _stop_running():
+    """结束可能正在运行的旧版启动器，否则目标 exe 被占用无法覆盖。"""
+    try:
+        subprocess.run(["taskkill", "/IM", EXE_NAME, "/F"],
+                       capture_output=True, timeout=15,
+                       creationflags=0x08000000 if os.name == "nt" else 0)
+    except Exception:
+        pass
+
+
 class InstallWorker(QThread):
     progress = pyqtSignal(int, int, str)   # 当前 / 总数 / 文件名
     done = pyqtSignal(str)                 # 目标目录 或 "ERR:..."
@@ -61,6 +71,7 @@ class InstallWorker(QThread):
 
     def run(self):
         try:
+            _stop_running()                # 关键：先结束旧实例再覆盖
             self.dst.mkdir(parents=True, exist_ok=True)
             files = [f for f in self.src.rglob("*") if f.is_file()]
             if self.uninst and self.uninst.exists():
@@ -75,6 +86,9 @@ class InstallWorker(QThread):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(str(f), str(target))
                 self.progress.emit(i + 1, total, str(target.name))
+            # 校验主程序确实写入成功（避免旧文件残留导致"装完还是旧版"）
+            if not (self.dst / EXE_NAME).exists():
+                raise RuntimeError(f"主程序 {EXE_NAME} 未能写入目标目录")
             self.done.emit(str(self.dst))
         except Exception as e:
             self.done.emit("ERR:" + str(e))
