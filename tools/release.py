@@ -25,9 +25,13 @@ USER = "PixelForgeLablbm-tech"
 REPO = "ComfyUIBM_Launcher"
 API = "https://api.github.com"
 
-RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.1
+RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.2
 
 基于 Python + PyQt5 的 ComfyUI 本地管理工具。
+
+### v1.2.2 更新内容
+- **新增：DPI 缩放设置**（设置 → 通用）：自动 / 关闭 / 100% / 125% / 150% / 200%，
+  修改后重启生效，解决高分屏界面过小或过大的问题
 
 ### v1.2.1 更新内容（修复更新下载）
 - **修复：更新文件下载走 GitHub 加速镜像**：直连 github.com 不通的网络
