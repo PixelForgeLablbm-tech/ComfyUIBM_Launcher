@@ -294,19 +294,27 @@ class SettingsTab(QWidget):
             bat = Path(tempfile.gettempdir()) / "ComfyUIBM_update.bat"
             bat.write_text(
                 "@echo off\r\n"
-                "timeout /t 2 /nobreak >nul\r\n"
-                f'copy /y "{path}" "{exe}" >nul\r\n'
-                "if errorlevel 1 (\r\n"
+                "timeout /t 3 /nobreak >nul\r\n"
+                f'taskkill /IM "{Path(exe).name}" /F >nul 2>&1\r\n'
+                "timeout /t 1 /nobreak >nul\r\n"
+                "set OK=0\r\n"
+                "for %%i in (1 2 3) do (\r\n"
+                f'  copy /y "{path}" "{exe}" >nul 2>&1\r\n'
+                "  if not errorlevel 1 set OK=1 & goto copied\r\n"
+                "  timeout /t 2 /nobreak >nul\r\n"
+                ")\r\n"
+                ":copied\r\n"
+                'if "%OK%"=="0" (\r\n'
                 f'  echo UPDATE_COPY_FAILED {path} >> "{err_log}"\r\n'
                 f'  start "" "{exe}"\r\n'
-                f'  del "{path}" >nul\r\n'
-                '  del "%~f0" >nul\r\n'
+                f'  del "{path}" >nul 2>&1\r\n'
+                '  del "%~f0" >nul 2>&1\r\n'
                 "  exit /b 1\r\n"
                 ")\r\n"
-                f'del "{path}" >nul\r\n'
-                f'if exist "{exe_dir}\\_internal" rmdir /s /q "{exe_dir}\\_internal" >nul\r\n'
+                f'del "{path}" >nul 2>&1\r\n'
+                f'if exist "{exe_dir}\\_internal" rmdir /s /q "{exe_dir}\\_internal" >nul 2>&1\r\n'
                 f'start "" "{exe}"\r\n'
-                'del "%~f0" >nul\r\n',
+                'del "%~f0" >nul 2>&1\r\n',
                 encoding="ascii", errors="replace")
             subprocess.Popen(
                 ["cmd", "/c", "start", "", "/b", str(bat)],
