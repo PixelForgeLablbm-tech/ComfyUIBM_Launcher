@@ -12,13 +12,23 @@ class GitError(RuntimeError):
     pass
 
 
+def _norm_git_path(p) -> str:
+    """统一为 git 偏好的正斜杠形式（safe.directory 匹配更稳）。"""
+    return str(p).replace("\\", "/")
+
+
 def run_git(cwd, *args, timeout=180, check=True, env=None, extra_args=None):
     """在 cwd 目录执行 git 命令，返回 CompletedProcess。
 
+    自动注入 -c safe.directory=<cwd>：免去拷贝安装 / 移动盘等场景的
+    "dubious ownership" 报错（仅本次命令生效，不修改全局配置）。
     extra_args: 插在子命令前的参数（用于注入 -c 加速配置）；
     env: 额外环境变量（如代理），自动合并到当前环境。
     """
-    cmd = ["git"] + list(extra_args or []) + list(args)
+    trust = []
+    if cwd:
+        trust = ["-c", f"safe.directory={_norm_git_path(cwd)}"]
+    cmd = ["git"] + trust + list(extra_args or []) + list(args)
     full_env = dict(os.environ)
     if env:
         full_env.update(env)
