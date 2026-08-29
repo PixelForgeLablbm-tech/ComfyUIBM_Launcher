@@ -25,9 +25,15 @@ USER = "PixelForgeLablbm-tech"
 REPO = "ComfyUIBM_Launcher"
 API = "https://api.github.com"
 
-RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.5
+RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.6
 
 基于 Python + PyQt5 的 ComfyUI 本地管理工具。
+
+### v1.2.6 更新内容
+- **git 操作自动注入 safe.directory**：拷贝安装 / 移动盘（U盘等）等
+  "dubious ownership" 场景不再需要手动配置，更新维护 / 插件更新直接可用
+- **更新替换"改名让位"**（v1.2.5 引入）：运行中也能一次替换成功，
+  彻底解决"更新后还是旧版"；启动自动清理 .old 残留
 
 ### v1.2.5 更新内容
 - **DPI 缩放设置全面完善**（设置 → 通用）：
@@ -41,7 +47,7 @@ RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.5
 - **修复：快速开关窗口误弹"后台任务运行中"**：提醒只针对安装/更新等
   重要任务，状态轮询/版本检查等秒级任务不再误弹
 - **更新下载走 GitHub 加速镜像**：受限网络也能自动更新（直连失败自动
-  重试镜像），替换更稳健（失败留旧版、清理 onedir 残留）
+  重试镜像）
 
 ### v1.2.1 更新内容（修复更新下载）
 - **修复：更新文件下载走 GitHub 加速镜像**：直连 github.com 不通的网络
@@ -51,8 +57,8 @@ RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.5
 - **受限网络用户提示**：若软件内更新下载失败，可在「设置 → 网络」开启
   代理后重试；或手动下载（浏览器走系统代理）：
   https://github.com/PixelForgeLablbm-tech/ComfyUIBM_Launcher/releases
-  加速直链（把 v1.2.5 换成最新版本号）：
-  https://gh-proxy.com/https://github.com/PixelForgeLablbm-tech/ComfyUIBM_Launcher/releases/download/v1.2.5/ComfyUIBM_Launcher.exe
+  加速直链（把 v1.2.6 换成最新版本号）：
+  https://gh-proxy.com/https://github.com/PixelForgeLablbm-tech/ComfyUIBM_Launcher/releases/download/v1.2.6/ComfyUIBM_Launcher.exe
 
 ### v1.2.0 更新内容（内核维护全面升级）
 - **事务式安装**：Torch / xformers / SageAttention / llama-cpp / Triton 全部改为
