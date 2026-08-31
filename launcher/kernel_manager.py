@@ -992,18 +992,26 @@ def install_llamacpp(inst, mirrors: dict, progress=None, url=""):
 
 
 def _triton_candidates():
-    """PyPI triton-windows 有 Windows 轮子的版本（新→旧），取最新 15 个。"""
+    """PyPI triton-windows 有 Windows 轮子的版本（新→旧）。
+
+    每个版本线（如 3.7.1）只保留最新 post 构建，跳过 alpha/beta/rc，
+    避免列表被几十个 post 版本刷屏。
+    """
     try:
         idx = _http_json("https://pypi.org/pypi/triton-windows/json", timeout=30)
     except Exception as e:
         raise RuntimeError(f"查询 PyPI triton-windows 信息失败：{e}")
-    versions = []
+    best = {}
     for v, files in (idx.get("releases") or {}).items():
-        if any((f.get("filename") or "").endswith("win_amd64.whl")
-               for f in (files or [])):
-            versions.append(v)
-    versions.sort(key=_ver_key, reverse=True)
-    return versions[:15]
+        if not any((f.get("filename") or "").endswith("win_amd64.whl")
+                   for f in (files or [])):
+            continue
+        if re.search(r"[abc](\d|$)", v):        # 跳过 alpha/beta/rc
+            continue
+        base = re.sub(r"\.post\d+$", "", v)      # 版本线主版本
+        if base not in best or _ver_key(v) > _ver_key(best[base]):
+            best[base] = v
+    return sorted(best.values(), key=_ver_key, reverse=True)
 
 
 def triton_plan(inst):
