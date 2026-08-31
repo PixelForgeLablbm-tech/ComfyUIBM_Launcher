@@ -26,10 +26,19 @@ class KernelTab(QWidget):
          "高效注意力实现（长序列生图加速）", "sageattention"),
     ]
 
+    # 可卸载组件 → pip 包名（Torch 不加卸载，避免误卸破坏环境）
+    UNINSTALL_NAMES = {
+        "xformers": ["xformers"],
+        "Triton": ["triton-windows"],
+        "llama-cpp": ["llama-cpp-python"],
+        "SageAttention": ["sageattention"],
+    }
+
     def __init__(self, win, parent=None):
         super().__init__(parent)
         self.win = win
         self._rows = {}
+        self._un_buttons = {}
         self._name_labels = {}
         self._env_keys = {}
         self._busy = False
@@ -56,6 +65,15 @@ class KernelTab(QWidget):
             btn.setObjectName("primary")
             btn.setFixedHeight(34)
             btn.setMinimumWidth(140)
+            if name in self.UNINSTALL_NAMES:
+                btn_un = QPushButton("卸载")
+                btn_un.setObjectName("ghost")
+                btn_un.setFixedHeight(30)
+                btn_un.setMinimumWidth(60)
+                btn_un.clicked.connect(
+                    lambda _=False, n=name: self._uninstall(n))
+            else:
+                btn_un = None
             if name == "Torch":
                 btn.clicked.connect(
                     lambda _=False: self._install_torch_dialog())
@@ -81,15 +99,19 @@ class KernelTab(QWidget):
             desc_lb = QLabel(desc)
             desc_lb.setProperty("dim", True)
             row.addWidget(btn)
+            if btn_un:
+                row.addWidget(btn_un)
             row.addWidget(name_lb, 1)
             row.addWidget(desc_lb, 1)
             v.addLayout(row)
             self._rows[name] = btn
+            self._un_buttons[name] = btn_un
             self._name_labels[name] = name_lb
             self._env_keys[name] = env_key
         tip = QLabel("安装到当前实例的 Python 环境（带 PyPI 镜像 / 代理配置）。"
                      "Torch 始终从 PyTorch 官方源安装。"
-                     "所有安装均为事务式：先预检、失败自动回滚，不会破坏原有版本。")
+                     "所有安装均为事务式：先预检、失败自动回滚，不会破坏原有版本。"
+                     "xformers / Triton / llama-cpp / SageAttention 可随时卸载。")
         tip.setProperty("dim", True)
         tip.setWordWrap(True)
         v.addWidget(tip)
@@ -389,6 +411,43 @@ class KernelTab(QWidget):
         self._busy = busy
         for btn in self._rows.values():
             btn.setEnabled(not busy)
+        for btn in self._un_buttons.values():
+            if btn:
+                btn.setEnabled(not busy)
+
+    def _uninstall(self, name):
+        """卸载内核组件（Torch 除外）：确认后 pip uninstall。"""
+        inst = self.win.selected_instance()
+        if not inst or not inst.is_local:
+            QMessageBox.information(self, "提示", "请先在「实例管理」中选择一个本地实例")
+            return
+        if self.win.pm.is_running():
+            QMessageBox.warning(self, "提示", "请先停止正在运行的 ComfyUI 再卸载内核组件")
+            return
+        names = self.UNINSTALL_NAMES.get(name)
+        if not names:
+            return
+        ret = QMessageBox.question(
+            self, "确认卸载",
+            f"确定卸载 {name}（{' '.join(names)}）？\n\n"
+            "卸载后相关功能将不可用；如需要可随时重新安装。",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if ret != QMessageBox.Yes:
+            return
+        self._set_busy(True)
+        self.log.clear()
+        mirrors = dict(self.win.config.mirrors)
+
+        def work(report):
+            kernel_manager.uninstall_package(inst, names, mirrors, report)
+            return f"卸载完成：{name}"
+
+        self.win.tasks.start(
+            work,
+            on_progress=self._append_log,
+            on_done=lambda msg: self._done(msg),
+            on_error=self._error,
+        )
 
     def _done(self, msg):
         self._set_busy(False)

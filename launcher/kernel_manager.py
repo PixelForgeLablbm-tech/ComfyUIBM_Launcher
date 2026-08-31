@@ -563,6 +563,27 @@ def install_package(inst, spec: str, mirrors: dict, progress=None):
                      label=spec, timeout=3600, mirrors=mirrors)
 
 
+def uninstall_package(inst, names, mirrors=None, progress=None):
+    """卸载指定内核组件（pip uninstall -y）。names: 包名列表。
+
+    用于 xformers / Triton / llama-cpp / SageAttention 等（Torch 不在内）。
+    """
+    python = inst.resolve_python("python")
+    if not python:
+        raise RuntimeError("未找到 Python 解释器，请先在实例/设置中配置")
+    env = dict(os.environ)
+    env.update(pip_env(mirrors or {}))
+    if progress:
+        progress(f"⏳ 正在卸载：{' '.join(names)}…")
+    rc, out = _stream_pip(
+        python, ["-m", "pip", "uninstall", "-y"] + list(names),
+        env, inst.path, progress, 600)
+    if rc != 0:
+        raise RuntimeError(f"卸载失败：{_analyze_failure(out)}")
+    if progress:
+        progress("✅ 卸载完成")
+
+
 def install_torch(inst, cuda_suffix: str, mirrors: dict, progress=None,
                   version: str = ""):
     """从 PyTorch 官方索引安装 Torch 三件套（事务式，失败自动回滚）。
