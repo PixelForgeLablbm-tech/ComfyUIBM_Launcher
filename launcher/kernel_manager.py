@@ -970,6 +970,36 @@ def install_llamacpp(inst, mirrors: dict, progress=None, url=""):
                    verify=_import_verify("llama_cpp"))
 
 
+def _triton_candidates():
+    """PyPI triton-windows 有 Windows 轮子的版本（新→旧），取最新 15 个。"""
+    try:
+        idx = _http_json("https://pypi.org/pypi/triton-windows/json", timeout=30)
+    except Exception as e:
+        raise RuntimeError(f"查询 PyPI triton-windows 信息失败：{e}")
+    versions = []
+    for v, files in (idx.get("releases") or {}).items():
+        if any((f.get("filename") or "").endswith("win_amd64.whl")
+               for f in (files or [])):
+            versions.append(v)
+    versions.sort(key=_ver_key, reverse=True)
+    return versions[:15]
+
+
+def triton_plan(inst):
+    """Triton 安装选择方案：可用版本列表 + 自动预选最新 <3.8。"""
+    python = inst.resolve_python("python")
+    if not python:
+        raise RuntimeError("未找到 Python 解释器，请先在实例/设置中配置")
+    cands = _triton_candidates()
+    matched = next((i for i, v in enumerate(cands)
+                    if _ver_key(v) < (3, 8, 0, 0)), None)
+    return {
+        "title": "安装 Triton（triton-windows，选择版本）",
+        "items": [(f"triton-windows {v}", v) for v in cands],
+        "matched": matched,
+    }
+
+
 def wheel_install_plan(inst, which: str):
     """获取安装候选方案（供 UI 弹窗选择）。
 

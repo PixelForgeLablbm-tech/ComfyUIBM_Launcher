@@ -513,3 +513,65 @@ class WheelInstallDialog(QDialog):
             "url": self.cb.currentData(),
         }
         self.accept()
+
+
+# ---------------------------------------------------------------- 版本选择
+class VersionInstallDialog(QDialog):
+    """通用版本选择对话框（如 Triton 选版本）。
+
+    plan: 含 title / items:[(label, value)] / matched:下标或None。
+    """
+
+    def __init__(self, plan: dict, parent=None):
+        super().__init__(parent)
+        from PyQt5.QtWidgets import QLabel
+
+        self.result = None
+        self.setWindowTitle(plan.get("title", "选择版本"))
+        self.setMinimumWidth(560)
+        v = QVBoxLayout(self)
+        v.setSpacing(10)
+
+        items = plan.get("items") or []
+        matched = plan.get("matched")
+        if matched is not None:
+            tip = QLabel(
+                f"✔ 已自动匹配（第 {matched + 1} 项）；如需其他版本可手动改选，"
+                "安装后会验证并自动回滚不兼容项。")
+            tip.setProperty("dim", True)
+        else:
+            tip = QLabel("以下为全部可用版本，请选择。")
+            tip.setProperty("dim", True)
+        v.addWidget(tip)
+
+        self.cb = QComboBox()
+        self.cb.setMinimumHeight(32)
+        for label, value in items:
+            self.cb.addItem(label, value)
+        if matched is not None and 0 <= matched < len(items):
+            self.cb.setCurrentIndex(matched)
+        v.addWidget(self.cb)
+        v.addSpacing(4)
+
+        btns = QHBoxLayout()
+        btns.addStretch(1)
+        btn_install = QPushButton("安装所选")
+        btn_install.setObjectName("primary")
+        btn_install.setFixedHeight(32)
+        btn_install.setMinimumWidth(100)
+        btn_install.setEnabled(bool(items))
+        btn_install.clicked.connect(self._ok)
+        btn_cancel = QPushButton("取消")
+        btn_cancel.setFixedHeight(32)
+        btn_cancel.setMinimumWidth(90)
+        btn_cancel.clicked.connect(self.reject)
+        btns.addWidget(btn_install)
+        btns.addWidget(btn_cancel)
+        v.addLayout(btns)
+
+    def _ok(self):
+        self.result = {
+            "label": self.cb.currentText(),
+            "value": self.cb.currentData(),
+        }
+        self.accept()

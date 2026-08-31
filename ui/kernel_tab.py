@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
 )
 
 from launcher import kernel_manager
-from ui.dialogs import TorchInstallDialog, WheelInstallDialog
+from ui.dialogs import TorchInstallDialog, VersionInstallDialog, WheelInstallDialog
 
 
 class KernelTab(QWidget):
@@ -71,6 +71,9 @@ class KernelTab(QWidget):
                 btn.clicked.connect(
                     lambda _=False: self._install_kernel_wheel(
                         "llama-cpp", "llamacpp"))
+            elif name == "Triton":
+                btn.clicked.connect(
+                    lambda _=False: self._install_triton())
             else:
                 btn.clicked.connect(
                     lambda _=False, s=spec, n=name: self._install(n, s))
@@ -313,6 +316,55 @@ class KernelTab(QWidget):
             def work(report):
                 install_func(inst, mirrors, report, url=url)
                 return f"安装完成：{name}"
+
+            self.win.tasks.start(
+                work,
+                on_progress=self._append_log,
+                on_done=lambda msg: self._done(msg),
+                on_error=self._error,
+            )
+
+        self.win.tasks.start(
+            fetch,
+            on_progress=self._append_log,
+            on_done=pick,
+            on_error=self._error,
+        )
+
+    def _install_triton(self):
+        """Triton：先弹窗选版本（自动预选最新 <3.8），确认后安装所选版本。"""
+        inst = self.win.selected_instance()
+        if not inst or not inst.is_local:
+            QMessageBox.information(self, "提示", "请先在「实例管理」中选择一个本地实例")
+            return
+        if self.win.pm.is_running():
+            QMessageBox.warning(self, "提示", "请先停止正在运行的 ComfyUI 再安装内核组件")
+            return
+        self._set_busy(True)
+        self.log.clear()
+
+        def fetch(report):
+            report("⏳ 正在获取 triton-windows 可用版本…")
+            return kernel_manager.triton_plan(inst)
+
+        def pick(plan):
+            self._set_busy(False)
+            if not plan.get("items"):
+                QMessageBox.information(
+                    self, "提示", "没有获取到可用版本（网络异常），请稍后重试")
+                return
+            dlg = VersionInstallDialog(plan, parent=self)
+            if dlg.exec_() != dlg.Accepted or not dlg.result:
+                return
+            version = dlg.result["value"]
+            self._set_busy(True)
+            self.log.clear()
+            mirrors = dict(self.win.config.mirrors)
+
+            def work(report):
+                kernel_manager.install_package(
+                    inst, f"triton-windows=={version}", mirrors, report)
+                return f"安装完成：Triton {version}"
 
             self.win.tasks.start(
                 work,
