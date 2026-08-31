@@ -25,9 +25,18 @@ USER = "PixelForgeLablbm-tech"
 REPO = "ComfyUIBM_Launcher"
 API = "https://api.github.com"
 
-RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.6
+RELEASE_NOTES = """## ComfyUIBM启动器 v1.2.7
 
 基于 Python + PyQt5 的 ComfyUI 本地管理工具。
+
+### v1.2.7 更新内容
+- **Triton 版本选择安装**（内核维护）：弹窗选择版本（按版本线去重显示），
+  自动预选最新 <3.8，与其它内核组件一致的"先选择再安装"体验
+- **内核组件卸载**（内核维护）：xformers / Triton / llama-cpp / SageAttention
+  可一键卸载（确认后 pip uninstall，实时日志），Torch 不提供卸载
+- **修复：更新后 bootloader 弹窗**（PYI_APPLICATION_HOME_DIR 等）：更新/重启
+  前清掉 PyInstaller 的 _PYI_* 环境变量，新版启动不再被误判为子进程
+- **通用安装确认框**：防止误点直接开装
 
 ### v1.2.6 更新内容
 - **git 操作自动注入 safe.directory**：拷贝安装 / 移动盘（U盘等）等
