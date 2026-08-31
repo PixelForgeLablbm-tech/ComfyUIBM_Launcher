@@ -179,11 +179,16 @@ class SettingsTab(QWidget):
             if ret != QMessageBox.Yes:
                 self.win.sb("已取消重启，DPI 将在下次启动生效")
                 return
+        # 清掉 PyInstaller onefile 的父/子进程变量（_PYI_*），否则新版/重启的
+        # 引导程序会误判为"子进程"而启动失败（PYI_APPLICATION_HOME_DIR 弹窗等）
+        env = dict(os.environ)
+        for k in [k for k in env if k.startswith("_PYI_")]:
+            env.pop(k, None)
         if getattr(sys, "frozen", False):
-            subprocess.Popen([sys.executable],
+            subprocess.Popen([sys.executable], env=env,
                              creationflags=0x08000000 if os.name == "nt" else 0)
         else:
-            subprocess.Popen([sys.executable, "main.py"],
+            subprocess.Popen([sys.executable, "main.py"], env=env,
                              creationflags=0x08000000 if os.name == "nt" else 0)
         self.win._updating = True          # 关闭时不询问、不停 ComfyUI
         QApplication.instance().quit()
@@ -296,7 +301,14 @@ class SettingsTab(QWidget):
                 # 大厂式"改名让位"更新：不覆盖运行中的 exe（Windows 允许重命名
                 # 运行中的 exe，但不允许覆盖），改名腾位 → 新文件就位 → 删旧文件。
                 # 完全不依赖旧进程何时退出，一次成功。
+                # 先清掉 PyInstaller 的 _PYI_* 环境变量：本进程继承自旧版 onefile
+                # 的父/子进程变量会让新版引导程序误判"子进程"而启动失败
+                # （PYI_APPLICATION_HOME_DIR / Security validation failure 等弹窗）。
                 "@echo off\r\n"
+                "set _PYI_ARCHIVE_FILE=\r\n"
+                "set _PYI_PARENT_PROCESS_LEVEL=\r\n"
+                "set _PYI_APPLICATION_HOME_DIR=\r\n"
+                "set _PYI_SPLASH_IPC=\r\n"
                 f'move /y "{exe}" "{exe}.old" >nul 2>&1\r\n'
                 "if errorlevel 1 (\r\n"
                 f'  echo UPDATE_RENAME_FAILED {exe} >> "{err_log}"\r\n'
