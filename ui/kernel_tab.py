@@ -247,6 +247,15 @@ class KernelTab(QWidget):
         if self.win.pm.is_running():
             QMessageBox.warning(self, "提示", "请先停止正在运行的 ComfyUI 再安装内核组件")
             return
+        # 与其它内核安装一致：先确认再安装，避免误点直接开装
+        ret = QMessageBox.question(
+            self, "确认安装",
+            f"即将安装 {name}（{spec}）。\n\n"
+            "安装带预检 + 装后验证 + 失败自动回滚，不会破坏原有版本。\n\n"
+            "确定开始吗？",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if ret != QMessageBox.Yes:
+            return
         self._set_busy(True)
         self.log.clear()
         mirrors = dict(self.win.config.mirrors)
