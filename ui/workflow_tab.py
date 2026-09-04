@@ -50,39 +50,40 @@ class WorkflowTab(QWidget):
         tv.addLayout(row)
         lay.addWidget(top)
 
-        # 结果
+        # 结果：已安装 / 未安装 左右两栏（互不遮挡）
         card = QGroupBox("识别结果")
-        cv = QVBoxLayout(card)
+        cv = QHBoxLayout(card)
 
-        head = QHBoxLayout()
-        head.addWidget(QLabel("<b>已安装</b>"))
-        head.addStretch(1)
-        self.lb_summary = QLabel("")
-        self.lb_summary.setProperty("dim", True)
-        head.addWidget(self.lb_summary)
-        cv.addLayout(head)
-
+        left_col = QVBoxLayout()
+        lh = QHBoxLayout()
+        lh.addWidget(QLabel("<b>已安装</b>"))
+        lh.addStretch(1)
+        left_col.addLayout(lh)
         self.list_installed = QListWidget()
-        self.list_installed.setMaximumHeight(170)
-        cv.addWidget(self.list_installed)
+        left_col.addWidget(self.list_installed, 1)
+        cv.addLayout(left_col, 1)
 
-        miss_head = QHBoxLayout()
-        miss_head.addWidget(QLabel("<b>未安装（可复制插件名去插件管理搜索）</b>"))
-        miss_head.addStretch(1)
-        btn_copy_all = QPushButton("复制全部未安装插件名")
+        right_col = QVBoxLayout()
+        rh = QHBoxLayout()
+        rh.addWidget(QLabel("<b>未安装（可复制插件名）</b>"))
+        rh.addStretch(1)
+        btn_copy_all = QPushButton("复制全部")
         btn_copy_all.setObjectName("ghost")
         btn_copy_all.setFixedHeight(28)
         btn_copy_all.clicked.connect(self._copy_all_missing)
         self.btn_copy_all = btn_copy_all
-        miss_head.addWidget(btn_copy_all)
-        cv.addLayout(miss_head)
-
+        rh.addWidget(btn_copy_all)
+        right_col.addLayout(rh)
         self.list_missing = QListWidget()
-        cv.addWidget(self.list_missing, 1)
+        right_col.addWidget(self.list_missing, 1)
+        cv.addLayout(right_col, 1)
 
         lay.addWidget(card, 1)
 
-        # 识别不到的节点提示
+        # 顶部总结 + 识别不到的节点提示
+        self.lb_summary = QLabel("")
+        self.lb_summary.setProperty("dim", True)
+        lay.addWidget(self.lb_summary)
         self.lb_unmapped = QLabel("")
         self.lb_unmapped.setProperty("dim", True)
         self.lb_unmapped.setWordWrap(True)
@@ -164,7 +165,7 @@ class WorkflowTab(QWidget):
     def _add_item(self, lst, name, nodes, installed, repo=""):
         row = QWidget()
         rl = QHBoxLayout(row)
-        rl.setContentsMargins(8, 3, 8, 3)
+        rl.setContentsMargins(8, 4, 8, 4)
         rl.setSpacing(8)
         if not installed:
             btn = QPushButton("复制")
@@ -180,16 +181,18 @@ class WorkflowTab(QWidget):
         rl.addWidget(nm)
         rl.addStretch(1)
         if nodes:
-            d = QLabel(f"节点：{', '.join(nodes[:4])}"
-                       + (" …" if len(nodes) > 4 else ""))
+            d = QLabel(f"节点：{', '.join(nodes[:3])}"
+                       + (" …" if len(nodes) > 3 else ""))
             d.setStyleSheet("color: #8b96a8; font-size: 11.5px;")
             d.setTextInteractionFlags(Qt.TextSelectableByMouse)
             rl.addWidget(d)
+        # 先布局再取实际尺寸，避免行高为 0 造成叠住/不显示
+        row.adjustSize()
         item = QListWidgetItem(lst)
         item.setSizeHint(row.sizeHint())
+        item.setToolTip(repo or name)
         lst.addItem(item)
         lst.setItemWidget(item, row)
-        lst.setToolTip(repo or name)
 
     # ------------------------------------------------------------ 复制
     def _copy_text(self, text):
