@@ -50,22 +50,20 @@ class WorkflowTab(QWidget):
         tv.addLayout(row)
         lay.addWidget(top)
 
-        # 结果：已安装 / 未安装 左右两栏（互不遮挡）
+        # 结果：已安装（上）/ 未安装（下），各占一半、各自滚动
         card = QGroupBox("识别结果")
-        cv = QHBoxLayout(card)
+        cv = QVBoxLayout(card)
+        cv.setSpacing(6)
 
-        left_col = QVBoxLayout()
         lh = QHBoxLayout()
         lh.addWidget(QLabel("<b>已安装</b>"))
         lh.addStretch(1)
-        left_col.addLayout(lh)
+        cv.addLayout(lh)
         self.list_installed = QListWidget()
-        left_col.addWidget(self.list_installed, 1)
-        cv.addLayout(left_col, 1)
+        cv.addWidget(self.list_installed, 1)
 
-        right_col = QVBoxLayout()
         rh = QHBoxLayout()
-        rh.addWidget(QLabel("<b>未安装（可复制插件名）</b>"))
+        rh.addWidget(QLabel("<b>未安装（点复制，去插件管理搜索安装）</b>"))
         rh.addStretch(1)
         btn_copy_all = QPushButton("复制全部")
         btn_copy_all.setObjectName("ghost")
@@ -73,14 +71,13 @@ class WorkflowTab(QWidget):
         btn_copy_all.clicked.connect(self._copy_all_missing)
         self.btn_copy_all = btn_copy_all
         rh.addWidget(btn_copy_all)
-        right_col.addLayout(rh)
+        cv.addLayout(rh)
         self.list_missing = QListWidget()
-        right_col.addWidget(self.list_missing, 1)
-        cv.addLayout(right_col, 1)
+        cv.addWidget(self.list_missing, 1)
 
         lay.addWidget(card, 1)
 
-        # 顶部总结 + 识别不到的节点提示
+        # 底部：汇总 + 识别不到的节点提示
         self.lb_summary = QLabel("")
         self.lb_summary.setProperty("dim", True)
         lay.addWidget(self.lb_summary)
