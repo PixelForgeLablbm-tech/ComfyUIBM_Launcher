@@ -50,17 +50,10 @@ class WorkflowTab(QWidget):
         tv.addLayout(row)
         lay.addWidget(top)
 
-        # 结果：已安装（上）/ 未安装（下），各占一半、各自滚动
+        # 结果：未安装（上）/ 已安装（下），各占一半、各自滚动
         card = QGroupBox("识别结果")
         cv = QVBoxLayout(card)
         cv.setSpacing(6)
-
-        lh = QHBoxLayout()
-        lh.addWidget(QLabel("<b>已安装</b>"))
-        lh.addStretch(1)
-        cv.addLayout(lh)
-        self.list_installed = QListWidget()
-        cv.addWidget(self.list_installed, 1)
 
         rh = QHBoxLayout()
         rh.addWidget(QLabel("<b>未安装（点复制，去插件管理搜索安装）</b>"))
@@ -74,6 +67,13 @@ class WorkflowTab(QWidget):
         cv.addLayout(rh)
         self.list_missing = QListWidget()
         cv.addWidget(self.list_missing, 1)
+
+        lh = QHBoxLayout()
+        lh.addWidget(QLabel("<b>已安装</b>"))
+        lh.addStretch(1)
+        cv.addLayout(lh)
+        self.list_installed = QListWidget()
+        cv.addWidget(self.list_installed, 1)
 
         lay.addWidget(card, 1)
 
