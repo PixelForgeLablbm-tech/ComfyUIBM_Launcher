@@ -4,11 +4,11 @@ import os
 from pathlib import Path
 
 from PyQt5.QtWidgets import (
-    QCheckBox, QComboBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget,
+    QCheckBox, QComboBox, QFileDialog, QFormLayout, QFrame, QGroupBox,
+    QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget,
 )
 
-from launcher.mirrors import PYPI_MIRRORS
+from launcher.mirrors import GH_PROXY_PRESETS, PYPI_MIRRORS
 
 
 class SettingsTab(QWidget):
@@ -20,15 +20,20 @@ class SettingsTab(QWidget):
 
     def _build(self):
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(16, 12, 16, 8)
+        lay.setContentsMargins(16, 14, 16, 10)
         lay.setSpacing(12)
-        max_w = QWidget()
-        max_w.setMaximumWidth(680)
-        ml = QVBoxLayout(max_w)
+        content = QWidget()
+        content.setMaximumWidth(960)
+        ml = QVBoxLayout(content)
         ml.setContentsMargins(0, 0, 0, 0)
+        ml.setSpacing(12)
 
+        # ---------------- 通用 ----------------
         g1 = QGroupBox("通用")
-        f = QFormLayout(g1)
+        g1_lay = QVBoxLayout(g1)
+        f = QFormLayout()
+        f.setHorizontalSpacing(12)
+        f.setVerticalSpacing(9)
         py_row = QHBoxLayout()
         self.ed_python = QLineEdit()
         py_row.addWidget(self.ed_python, 1)
@@ -53,18 +58,23 @@ class SettingsTab(QWidget):
         ):
             self.cb_dpi.addItem(label, val)
         f.addRow("DPI 缩放:", self.cb_dpi)
+        g1_lay.addLayout(f)
         tip_dpi = QLabel("选择后自动保存，重启启动器后生效；若缩放过大导致窗口超出屏幕，会自动恢复。")
         tip_dpi.setProperty("dim", True)
         tip_dpi.setWordWrap(True)
-        f.addRow("", tip_dpi)
+        g1_lay.addWidget(tip_dpi)
         tip_tray = QLabel("点窗口 × 会直接退出软件，并自动停止正在运行的 ComfyUI（不留后台）。")
         tip_tray.setProperty("dim", True)
         tip_tray.setWordWrap(True)
-        f.addRow("", tip_tray)
+        g1_lay.addWidget(tip_tray)
         ml.addWidget(g1)
 
+        # ---------------- 网络 ----------------
         g2 = QGroupBox("网络（镜像 / 代理）")
-        f2 = QFormLayout(g2)
+        g2_lay = QVBoxLayout(g2)
+        f2 = QFormLayout()
+        f2.setHorizontalSpacing(12)
+        f2.setVerticalSpacing(8)
         self.cb_pypi = QComboBox()
         for key, label, _url in PYPI_MIRRORS:
             self.cb_pypi.addItem(label, key)
@@ -76,18 +86,60 @@ class SettingsTab(QWidget):
         self.ed_proxy = QLineEdit()
         self.ed_proxy.setPlaceholderText("http://127.0.0.1:7890")
         f2.addRow("代理地址:", self.ed_proxy)
+        g2_lay.addLayout(f2)
+
+        gh_panel = QFrame()
+        gh_panel.setObjectName("settingsGithub")
+        gh_lay = QVBoxLayout(gh_panel)
+        gh_lay.setContentsMargins(12, 10, 12, 10)
+        gh_lay.setSpacing(8)
+        gh_title = QLabel("GitHub 加速（国内镜像）")
+        gh_title.setObjectName("settingsSectionTitle")
+        gh_lay.addWidget(gh_title)
+        gh_row = QHBoxLayout()
+        gh_row.setSpacing(8)
+        self.btn_gh = QPushButton("加速关")
+        self.btn_gh.setObjectName("ghost")
+        self.btn_gh.setFixedSize(90, 32)
+        self.btn_gh.clicked.connect(self.toggle_gh)
+        gh_row.addWidget(self.btn_gh)
+        self.cb_gh = QComboBox()
+        self.cb_gh.setMinimumWidth(230)
+        for label, value in GH_PROXY_PRESETS:
+            self.cb_gh.addItem(label, value)
+        self.cb_gh.addItem("自定义…", "__custom__")
+        self.cb_gh.currentIndexChanged.connect(self._on_gh_prefix)
+        gh_row.addWidget(self.cb_gh, 1)
+        self.ed_gh_custom = QLineEdit()
+        self.ed_gh_custom.setPlaceholderText("https://你的加速服务/")
+        self.ed_gh_custom.setMinimumWidth(240)
+        self.ed_gh_custom.returnPressed.connect(self._save_gh_custom)
+        gh_row.addWidget(self.ed_gh_custom)
+        gh_lay.addLayout(gh_row)
+        gh_tip = QLabel(
+            "对本启动器的 ComfyUI / 插件克隆、拉取和版本查询生效；"
+            "不修改全局 Git 配置。加速失效时可切换镜像或关闭直连。")
+        gh_tip.setProperty("dim", True)
+        gh_tip.setWordWrap(True)
+        gh_lay.addWidget(gh_tip)
+        g2_lay.addWidget(gh_panel)
         tip = QLabel("代理与镜像仅对本启动器发起的 git / pip 命令生效，不影响系统全局。")
         tip.setProperty("dim", True)
         tip.setWordWrap(True)
-        f2.addRow("", tip)
+        g2_lay.addWidget(tip)
         ml.addWidget(g2)
 
+        # ---------------- 应用信息 ----------------
         g3 = QGroupBox("应用信息")
-        f3 = QFormLayout(g3)
+        g3_lay = QVBoxLayout(g3)
+        f3 = QFormLayout()
+        f3.setHorizontalSpacing(12)
+        f3.setVerticalSpacing(7)
         f3.addRow("名称:", QLabel("ComfyUIBM启动器"))
         from launcher import APP_VERSION
         f3.addRow("版本:", QLabel(APP_VERSION))
         f3.addRow("配置文件:", QLabel(str(self.win.config.path)))
+        g3_lay.addLayout(f3)
         btn_log = QPushButton("显示运行日志")
         btn_log.setObjectName("ghost")
         btn_log.clicked.connect(self.win.show_log_dock)
@@ -102,7 +154,7 @@ class SettingsTab(QWidget):
         row.addWidget(self.btn_update)
         row.addWidget(btn_decl)
         row.addStretch(1)
-        f3.addRow("", row)
+        g3_lay.addLayout(row)
         ml.addWidget(g3)
 
         btn_row = QHBoxLayout()
@@ -113,7 +165,7 @@ class SettingsTab(QWidget):
         btn_row.addStretch(1)
         ml.addLayout(btn_row)
         ml.addStretch(1)
-        lay.addWidget(max_w)
+        lay.addWidget(content)
 
     def _browse_python(self):
         f, _ = QFileDialog.getOpenFileName(self, "选择 Python 可执行文件",
@@ -136,11 +188,53 @@ class SettingsTab(QWidget):
         self.cb_proxy.setChecked(bool(m.get("use_proxy")))
         self.ed_proxy.setText(m.get("proxy", ""))
         self.ed_proxy.setEnabled(self.cb_proxy.isChecked())
+        self._sync_gh_ui()
         self.cb_proxy.toggled.connect(self.ed_proxy.setEnabled)
         # 主题切换即时生效，无需点「保存设置」
         self.cb_theme.currentIndexChanged.connect(self._on_theme_changed)
         # DPI 缩放选择即自动保存（重启后生效），无需点「保存设置」
         self.cb_dpi.currentIndexChanged.connect(self._on_dpi_changed)
+
+    def _sync_gh_ui(self):
+        mirrors = self.win.config.mirrors
+        enabled = bool(mirrors.get("gh_proxy"))
+        self.btn_gh.setText("加速开" if enabled else "加速关")
+        self.btn_gh.setStyleSheet(
+            "border-color: #7c5cff; color: #c4b5fd;" if enabled else "")
+        prefix = mirrors.get("gh_proxy_prefix", "")
+        idx = self.cb_gh.findData(prefix)
+        if idx >= 0:
+            self.cb_gh.setCurrentIndex(idx)
+            self.ed_gh_custom.setVisible(False)
+        else:
+            self.cb_gh.setCurrentIndex(self.cb_gh.findData("__custom__"))
+            self.ed_gh_custom.setText(prefix)
+            self.ed_gh_custom.setVisible(True)
+
+    def toggle_gh(self):
+        mirrors = self.win.config.mirrors
+        mirrors["gh_proxy"] = not mirrors.get("gh_proxy", False)
+        self.win.config.save()
+        self._sync_gh_ui()
+        self.win.sb("已开启 GitHub 加速" if mirrors["gh_proxy"]
+                    else "已关闭加速（直连 GitHub）")
+
+    def _on_gh_prefix(self, _idx):
+        prefix = self.cb_gh.currentData()
+        if prefix == "__custom__":
+            self.ed_gh_custom.setVisible(True)
+            return
+        self.ed_gh_custom.setVisible(False)
+        if prefix:
+            self.win.config.mirrors["gh_proxy_prefix"] = prefix
+            self.win.config.save()
+
+    def _save_gh_custom(self):
+        prefix = self.ed_gh_custom.text().strip()
+        if prefix:
+            self.win.config.mirrors["gh_proxy_prefix"] = prefix
+            self.win.config.save()
+            self.win.sb("已保存自定义 GitHub 加速地址")
 
     def _on_dpi_changed(self, _idx):
         """DPI 缩放：选择即保存；提供立即重启，避免选错后界面过大无法操作。"""

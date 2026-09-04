@@ -5,11 +5,23 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QAbstractItemView, QFileDialog, QGroupBox, QHBoxLayout, QHeaderView,
     QLabel, QLineEdit, QMessageBox, QPushButton, QSizePolicy, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QWidget,
+    QTableWidgetItem, QStyledItemDelegate, QStyleOptionViewItem, QVBoxLayout,
+    QWidget,
 )
 
 from launcher.instance_scanner import detect_instances
 from ui.dialogs import InstanceDialog, confirm
+
+
+class _ElidedTextDelegate(QStyledItemDelegate):
+    """单行显示长路径，保留完整内容供鼠标悬停查看。"""
+
+    def paint(self, painter, option, index):
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        opt.text = opt.fontMetrics.elidedText(
+            opt.text, Qt.ElideMiddle, max(0, opt.rect.width() - 16))
+        super().paint(painter, opt, index)
 
 
 def _cell_button(text, obj_name, callback, width=None):
@@ -46,9 +58,9 @@ def _cell_button(text, obj_name, callback, width=None):
 def _cell_widget(buttons):
     w = QWidget()
     lay = QHBoxLayout(w)
-    # 留出足够内边距，防止单元格边界裁切按钮 1px 边框/圆角
-    lay.setContentsMargins(6, 5, 6, 5)
-    lay.setSpacing(4)
+    # 统一操作区的安全边距，避免单元格边缘裁切按钮的边框/圆角。
+    lay.setContentsMargins(10, 5, 10, 5)
+    lay.setSpacing(6)
     for b in buttons:
         lay.addWidget(b)
     if len(buttons) == 1:
@@ -77,16 +89,22 @@ class InstancesTab(QWidget):
             ["名称", "ComfyUI 路径", "Python", "操作"])
         self.table_configured.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_configured.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        # 表头模式：名称/操作 Fixed，路径/Python Stretch
+        self.table_configured.setWordWrap(False)
+        path_delegate = _ElidedTextDelegate(self.table_configured)
+        self.table_configured.setItemDelegateForColumn(1, path_delegate)
+        self.table_configured.setItemDelegateForColumn(2, path_delegate)
+        # 名称、Python、操作使用稳定宽度；剩余空间全部让给 ComfyUI 路径。
+        # 这样长 Python 路径不会挤压或遮住右侧操作按钮。
         h1 = self.table_configured.horizontalHeader()
         h1.setSectionResizeMode(0, QHeaderView.Fixed)
         h1.setSectionResizeMode(1, QHeaderView.Stretch)
-        h1.setSectionResizeMode(2, QHeaderView.Stretch)
+        h1.setSectionResizeMode(2, QHeaderView.Fixed)
         h1.setSectionResizeMode(3, QHeaderView.Fixed)
         self.table_configured.verticalHeader().setVisible(False)
-        self.table_configured.verticalHeader().setDefaultSectionSize(40)
-        self.table_configured.setColumnWidth(0, 170)
-        self.table_configured.setColumnWidth(3, 230)   # 设为当前(94)+编辑(60)+移除(60)+间距
+        self.table_configured.verticalHeader().setDefaultSectionSize(44)
+        self.table_configured.setColumnWidth(0, 165)
+        self.table_configured.setColumnWidth(2, 220)
+        self.table_configured.setColumnWidth(3, 272)   # 三个按钮 + 间距 + 两侧安全边距
         v1.addWidget(self.table_configured)
         lay.addWidget(card1, 2)
 
@@ -126,6 +144,8 @@ class InstancesTab(QWidget):
             ["名称", "路径", "版本", "Python", "操作"])
         self.table_detected.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_detected.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table_detected.setWordWrap(False)
+        self.table_detected.setItemDelegateForColumn(1, _ElidedTextDelegate(self.table_detected))
         # 表头模式：路径 Stretch，其余 Fixed
         h2 = self.table_detected.horizontalHeader()
         h2.setSectionResizeMode(0, QHeaderView.Fixed)
@@ -155,13 +175,18 @@ class InstancesTab(QWidget):
                 name_item.setForeground(QColor("#c4b5fd"))
             path_item = QTableWidgetItem(inst.describe())
             py_item = QTableWidgetItem(inst.python or "(自动/全局)")
+            path_item.setToolTip(inst.describe())
+            py_item.setToolTip(inst.python or "(自动/全局)")
             ops = _cell_widget([
                 _cell_button("设为当前", "ghost",
-                             lambda _=False, uid=inst.uid: self.use_instance(uid)),
+                             lambda _=False, uid=inst.uid: self.use_instance(uid),
+                             width=84),
                 _cell_button("编辑", "ghost",
-                             lambda _=False, uid=inst.uid: self.edit_instance(uid)),
+                             lambda _=False, uid=inst.uid: self.edit_instance(uid),
+                             width=58),
                 _cell_button("移除", "danger",
-                             lambda _=False, uid=inst.uid: self.remove_instance(uid)),
+                             lambda _=False, uid=inst.uid: self.remove_instance(uid),
+                             width=58),
             ])
             self.table_configured.setItem(row, 0, name_item)
             self.table_configured.setItem(row, 1, path_item)
@@ -194,6 +219,7 @@ class InstancesTab(QWidget):
             is_added = d["path"].lower() in added_ids
             name_item = QTableWidgetItem(d["name"])
             path_item = QTableWidgetItem(d["path"])
+            path_item.setToolTip(d["path"])
             ver_item = QTableWidgetItem(d.get("version") or "未知")
             py_item = QTableWidgetItem("✓ 已找到" if d.get("python")
                                        else "✗ 未找到")

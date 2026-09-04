@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
-"""更新维护页签：版本列表（tags/分支）/ 更新 / 回滚 / 依赖安装 / GitHub 加速。
-
-排版参考 ConUI：左侧卡片（版本信息 / 版本列表 / GitHub 加速），右侧操作日志。
-"""
+"""更新维护页签：版本列表（tags/分支）/ 更新 / 回滚 / 依赖安装。"""
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QComboBox, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+    QGroupBox, QHBoxLayout, QLabel, QListWidget,
     QListWidgetItem, QMessageBox, QPlainTextEdit, QPushButton,
-    QScrollArea, QVBoxLayout, QWidget,
+    QVBoxLayout, QWidget,
 )
 
 from launcher import updater
-from launcher.mirrors import GH_PROXY_PRESETS
 
 
 def _badge(text, color, bg):
@@ -125,15 +121,11 @@ class UpdateTab(QWidget):
         root.setContentsMargins(16, 12, 16, 8)
         root.setSpacing(14)
 
-        # ---------------- 左栏（滚动） ----------------
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setStyleSheet(
-            "QScrollArea { background: transparent; border: none; }")
+        # ---------------- 左栏：版本列表占满 GitHub 加速卡片释放的高度 ----------------
         left = QWidget()
         left.setStyleSheet("background: transparent;")
         lay = QVBoxLayout(left)
-        lay.setContentsMargins(0, 0, 4, 0)
+        lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(12)
 
         # 卡片1：当前版本
@@ -204,43 +196,7 @@ class UpdateTab(QWidget):
         cv.addWidget(tips)
         lay.addWidget(card_list, 1)
 
-        # 卡片3：GitHub 加速
-        card_gh = QGroupBox("GitHub 加速（国内镜像）")
-        gv = QVBoxLayout(card_gh)
-        gv.setSpacing(8)
-        gh_row = QHBoxLayout()
-        self.btn_gh = QPushButton("加速关")
-        self.btn_gh.setObjectName("ghost")
-        self.btn_gh.setFixedHeight(32)
-        self.btn_gh.setFixedWidth(90)
-        self.btn_gh.clicked.connect(self.toggle_gh)
-        gh_row.addWidget(self.btn_gh)
-        self.cb_gh = QComboBox()
-        self.cb_gh.setMinimumWidth(210)
-        for label, value in GH_PROXY_PRESETS:
-            self.cb_gh.addItem(label, value)
-        self.cb_gh.addItem("自定义…", "__custom__")
-        self.cb_gh.currentIndexChanged.connect(self._on_gh_prefix)
-        gh_row.addWidget(self.cb_gh)
-        self.ed_gh_custom = QLineEdit()
-        self.ed_gh_custom.setPlaceholderText("https://你的加速服务/")
-        self.ed_gh_custom.setMinimumWidth(180)
-        self.ed_gh_custom.returnPressed.connect(self._save_gh_custom)
-        gh_row.addWidget(self.ed_gh_custom)
-        gh_row.addStretch(1)
-        gv.addLayout(gh_row)
-        gh_tip = QLabel(
-            "开启后：ComfyUI 本体 / 插件的 clone、拉取、版本查询自动走镜像前缀"
-            "（不修改全局 git 配置）。关闭即直连 GitHub；加速服务失效时换一个即可。")
-        gh_tip.setProperty("dim", True)
-        gh_tip.setWordWrap(True)
-        gh_tip.setStyleSheet("font-size: 12px;")
-        gv.addWidget(gh_tip)
-        lay.addWidget(card_gh)
-
-        scroll.setWidget(left)
-        scroll.setFixedWidth(540)
-        root.addWidget(scroll)
+        root.addWidget(left, 3)
 
         # ---------------- 右栏：操作日志 ----------------
         card_log = QGroupBox("操作日志")
@@ -261,7 +217,7 @@ class UpdateTab(QWidget):
         btn_clear.clicked.connect(self.op_log.clear)
         head.addWidget(btn_clear)
         lv.addLayout(head)
-        root.addWidget(card_log, 1)
+        root.addWidget(card_log, 2)
 
     # ------------------------------------------------------------ 数据
     def reload(self):
@@ -274,7 +230,6 @@ class UpdateTab(QWidget):
         self.setEnabled(True)
         self._info = None
         self._selected = ""
-        self._sync_gh_ui()
         self._load_version_text()
     def _load_version_text(self, feedback=False):
         inst = self.win.selected_instance()
@@ -304,46 +259,6 @@ class UpdateTab(QWidget):
             on_done=done,
             on_error=fail,
         )
-
-    def _sync_gh_ui(self):
-        m = self.win.config.mirrors
-        on = bool(m.get("gh_proxy"))
-        self.btn_gh.setText("加速开" if on else "加速关")
-        self.btn_gh.setStyleSheet(
-            "border-color: #7c5cff; color: #c4b5fd;" if on else "")
-        prefix = m.get("gh_proxy_prefix", "")
-        idx = self.cb_gh.findData(prefix)
-        if idx >= 0:
-            self.cb_gh.setCurrentIndex(idx)
-            self.ed_gh_custom.setVisible(False)
-        else:
-            self.cb_gh.setCurrentIndex(self.cb_gh.findData("__custom__"))
-            self.ed_gh_custom.setText(prefix)
-            self.ed_gh_custom.setVisible(True)
-
-    def toggle_gh(self):
-        m = self.win.config.mirrors
-        m["gh_proxy"] = not m.get("gh_proxy", False)
-        self.win.config.save()
-        self._sync_gh_ui()
-        self.win.sb("已开启 GitHub 加速" if m["gh_proxy"] else "已关闭加速（直连 GitHub）")
-
-    def _on_gh_prefix(self, idx):
-        data = self.cb_gh.currentData()
-        if data == "__custom__":
-            self.ed_gh_custom.setVisible(True)
-            return
-        self.ed_gh_custom.setVisible(False)
-        if data:
-            self.win.config.mirrors["gh_proxy_prefix"] = data
-            self.win.config.save()
-
-    def _save_gh_custom(self):
-        v = self.ed_gh_custom.text().strip()
-        if v:
-            self.win.config.mirrors["gh_proxy_prefix"] = v
-            self.win.config.save()
-            self.win.sb("已保存自定义加速前缀")
 
     # ------------------------------------------------------------ 版本列表
     def refresh_versions(self):

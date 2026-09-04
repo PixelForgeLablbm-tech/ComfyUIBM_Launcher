@@ -212,6 +212,54 @@ QSystemTrayIcon { background: transparent; }
 DARK_QSS += """
 QFrame#topBar { background: #3a4e66; border-bottom: 1px solid #3a4c61; }
 QWidget#sidePanel { background: #3a4e66; }
+QLabel#workflowPageTitle { font-size: 20px; font-weight: 700; color: #e5defc; }
+QLabel#workflowResultState {
+    color: #a3adc2; background: #35475c; border: 1px solid #465a72;
+    border-radius: 11px; padding: 4px 10px; font-size: 12px;
+}
+QLabel#workflowResultState[state="busy"] { color: #c4b5fd; border-color: #7c5cff; }
+QLabel#workflowResultState[state="success"] { color: #6ee7b7; border-color: #34d399; }
+QLabel#workflowResultState[state="error"] { color: #fca5a5; border-color: #f87171; }
+QFrame#workflowDropZone {
+    background: #35475c; border: 1px dashed #566b85; border-radius: 10px;
+}
+QFrame#workflowDropZone[dragActive="true"] {
+    background: rgba(124, 92, 255, 0.16); border: 2px solid #a48bff;
+}
+QLabel#workflowDropTitle { color: #e5defc; font-size: 15px; font-weight: 700; }
+QLabel#workflowFileName { color: #d8dee9; padding: 4px 0; }
+QLabel#workflowMissingBadge, QLabel#workflowInstalledBadge {
+    border-radius: 10px; padding: 4px 9px; font-size: 12px; font-weight: 600;
+}
+QLabel#workflowMissingBadge { color: #fca5a5; background: rgba(248, 113, 113, 0.14); }
+QLabel#workflowInstalledBadge { color: #6ee7b7; background: rgba(52, 211, 153, 0.14); }
+QFrame#workflowMissingPane, QFrame#workflowInstalledPane {
+    background: #35475c; border: 1px solid #43576f; border-radius: 8px;
+}
+QFrame#workflowMissingPane { border-color: #72545d; }
+QLabel#workflowPaneTitle { color: #d8dee9; font-size: 14px; font-weight: 700; }
+QLabel#workflowPaneTip { font-size: 11.5px; }
+QListWidget#workflowMissingList, QListWidget#workflowInstalledList {
+    background: #304254; border: none; border-radius: 6px; padding: 4px;
+}
+QFrame#workflowMissingItem, QFrame#workflowInstalledItem {
+    background: #3a4e66; border: 1px solid #465a72; border-radius: 6px;
+}
+QFrame#workflowMissingItem { border-left: 3px solid #f87171; }
+QFrame#workflowInstalledItem { border-left: 3px solid #34d399; }
+QLabel#workflowPluginName { color: #e5defc; font-weight: 700; }
+QLabel#workflowPluginNodes { color: #a3adc2; font-size: 11.5px; }
+QFrame#workflowHint { background: #35475c; border: 1px solid #43576f; border-radius: 7px; }
+QLabel#workflowHintTitle { color: #c4b5fd; font-weight: 700; }
+QFrame#workflowDropZone QLabel,
+QFrame#workflowMissingPane QLabel,
+QFrame#workflowInstalledPane QLabel,
+QFrame#workflowHint QLabel { background: transparent; }
+QFrame#settingsGithub {
+    background: #35475c; border: 1px solid #43576f; border-radius: 8px;
+}
+QLabel#settingsSectionTitle { background: transparent; color: #c4b5fd; font-weight: 700; }
+QFrame#settingsGithub QLabel { background: transparent; }
 """
 
 LIGHT_QSS = """
@@ -420,6 +468,54 @@ QSplitter::handle { background: #e2e5ea; }
 QSystemTrayIcon { background: transparent; }
 QFrame#topBar { background: #eceef2; border-bottom: 1px solid #e2e5ea; }
 QWidget#sidePanel { background: #eceef2; }
+QLabel#workflowPageTitle { font-size: 20px; font-weight: 700; color: #2c313a; }
+QLabel#workflowResultState {
+    color: #6b7280; background: #ffffff; border: 1px solid #d5dae1;
+    border-radius: 11px; padding: 4px 10px; font-size: 12px;
+}
+QLabel#workflowResultState[state="busy"] { color: #6d4bd8; border-color: #7c5cff; }
+QLabel#workflowResultState[state="success"] { color: #0e9f6e; border-color: #0e9f6e; }
+QLabel#workflowResultState[state="error"] { color: #dc2626; border-color: #dc2626; }
+QFrame#workflowDropZone {
+    background: #ffffff; border: 1px dashed #aab2bf; border-radius: 10px;
+}
+QFrame#workflowDropZone[dragActive="true"] {
+    background: rgba(124, 92, 255, 0.10); border: 2px solid #7c5cff;
+}
+QLabel#workflowDropTitle { color: #2c313a; font-size: 15px; font-weight: 700; }
+QLabel#workflowFileName { color: #2c313a; padding: 4px 0; }
+QLabel#workflowMissingBadge, QLabel#workflowInstalledBadge {
+    border-radius: 10px; padding: 4px 9px; font-size: 12px; font-weight: 600;
+}
+QLabel#workflowMissingBadge { color: #dc2626; background: rgba(220, 38, 38, 0.09); }
+QLabel#workflowInstalledBadge { color: #0e9f6e; background: rgba(14, 159, 110, 0.10); }
+QFrame#workflowMissingPane, QFrame#workflowInstalledPane {
+    background: #ffffff; border: 1px solid #d5dae1; border-radius: 8px;
+}
+QFrame#workflowMissingPane { border-color: #e4b4b4; }
+QLabel#workflowPaneTitle { color: #2c313a; font-size: 14px; font-weight: 700; }
+QLabel#workflowPaneTip { font-size: 11.5px; }
+QListWidget#workflowMissingList, QListWidget#workflowInstalledList {
+    background: #f7f8fa; border: none; border-radius: 6px; padding: 4px;
+}
+QFrame#workflowMissingItem, QFrame#workflowInstalledItem {
+    background: #ffffff; border: 1px solid #dfe2e8; border-radius: 6px;
+}
+QFrame#workflowMissingItem { border-left: 3px solid #dc2626; }
+QFrame#workflowInstalledItem { border-left: 3px solid #0e9f6e; }
+QLabel#workflowPluginName { color: #2c313a; font-weight: 700; }
+QLabel#workflowPluginNodes { color: #7a8290; font-size: 11.5px; }
+QFrame#workflowHint { background: #ffffff; border: 1px solid #d5dae1; border-radius: 7px; }
+QLabel#workflowHintTitle { color: #6d4bd8; font-weight: 700; }
+QFrame#workflowDropZone QLabel,
+QFrame#workflowMissingPane QLabel,
+QFrame#workflowInstalledPane QLabel,
+QFrame#workflowHint QLabel { background: transparent; }
+QFrame#settingsGithub {
+    background: #f7f8fa; border: 1px solid #d5dae1; border-radius: 8px;
+}
+QLabel#settingsSectionTitle { background: transparent; color: #6d4bd8; font-weight: 700; }
+QFrame#settingsGithub QLabel { background: transparent; }
 """
 
 
