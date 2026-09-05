@@ -267,8 +267,9 @@ class UpdateTab(QWidget):
             return
         self.btn_refresh.setEnabled(False)
         self.btn_refresh.setText("查询中…")
-        self.op_log.clear()
-        self.op_log.appendPlainText("正在查询远端版本列表…")
+        # 不清空已有日志（自动刷新发生在更新完成之后，会保留历史输出）
+        self.op_log.appendPlainText("")
+        self.op_log.appendPlainText("── 正在查询远端版本列表… ──")
         # 用户主动刷新：绕过 60 秒缓存，确保「当前」标记等为最新
         updater._VERSION_CACHE.update(key=None, at=0.0, info=None)
         mirrors = dict(self.win.config.mirrors)
