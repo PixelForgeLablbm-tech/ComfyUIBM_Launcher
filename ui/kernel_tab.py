@@ -76,17 +76,21 @@ class KernelTab(QWidget):
             btn = QPushButton(f"安装 {name}")
             btn.setObjectName("primary")
             btn.setFixedHeight(34)
-            btn.setMinimumWidth(140)
+            btn.setFixedWidth(140)
             btn.setToolTip(spec)      # 规格信息悬停可见
+            un_btn = QPushButton("卸载")
+            un_btn.setObjectName("ghost")
+            un_btn.setFixedHeight(30)
+            un_btn.setFixedWidth(60)
+            track_un = un_btn
             if name in self.UNINSTALL_NAMES:
-                btn_un = QPushButton("卸载")
-                btn_un.setObjectName("ghost")
-                btn_un.setFixedHeight(30)
-                btn_un.setMinimumWidth(60)
-                btn_un.clicked.connect(
+                un_btn.clicked.connect(
                     lambda _=False, n=name: self._uninstall(n))
             else:
-                btn_un = None
+                # Torch 不提供卸载：置灰禁用占位，保证各行按钮区同宽、版本列对齐
+                un_btn.setEnabled(False)
+                un_btn.setToolTip("Torch 为核心依赖，不建议卸载")
+                track_un = None
             if name == "Torch":
                 btn.clicked.connect(
                     lambda _=False: self._install_torch_dialog())
@@ -107,18 +111,18 @@ class KernelTab(QWidget):
                     lambda _=False: self._install_triton())
             ver_lb = QLabel("")
             ver_lb.setAlignment(Qt.AlignLeft)
+            ver_lb.setWordWrap(False)          # 保证单行，不换行
             desc_lb = QLabel(desc)
             desc_lb.setProperty("dim", True)
             desc_lb.setAlignment(Qt.AlignCenter)   # 居中
             desc_lb.setFixedWidth(110)             # 固定在最右侧一列
             row.addWidget(btn)
-            if btn_un:
-                row.addWidget(btn_un)
+            row.addWidget(un_btn)                  # 卸载 或 置灰占位
             row.addWidget(ver_lb, 1)               # 中间：版本显示（识别后填充）
             row.addWidget(desc_lb)                 # 不加伸缩 → 固定在右端
             v.addLayout(row)
             self._rows[name] = btn
-            self._un_buttons[name] = btn_un
+            self._un_buttons[name] = track_un      # 卸载按钮或 None
             self._version_labels[name] = ver_lb
         lay.addWidget(card)
 
