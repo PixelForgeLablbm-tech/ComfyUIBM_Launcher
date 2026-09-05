@@ -15,15 +15,15 @@ class KernelTab(QWidget):
     # (显示名, pip 安装规格/说明, 说明, 环境识别键)
     ITEMS = [
         ("Torch", "torch torchvision torchaudio",
-         "深度学习框架（ComfyUI 核心依赖，事务式安装）", "torch"),
+         "深度学习框架", "torch"),
         ("xformers", "按已装 torch 自动匹配官方 Windows 轮子",
-         "注意力优化（提升生图速度与显存效率）", "xformers"),
+         "注意力优化", "xformers"),
         ("Triton", "-U triton-windows<3.8",
-         "GPU 编译内核（Windows 版）", "triton"),
+         "GPU 编译内核", "triton"),
         ("llama-cpp", "JamePeng CUDA 版轮子（按 CUDA/Python 匹配）",
-         "LLM 本地推理（llama.cpp）", "llama_cpp"),
+         "LLM 本地推理", "llama_cpp"),
         ("SageAttention", "官方 Releases 轮子（按 torch/CUDA 匹配）",
-         "高效注意力实现（长序列生图加速）", "sageattention"),
+         "高效注意力实现", "sageattention"),
     ]
 
     # 可卸载组件 → pip 包名（Torch 不加卸载，避免误卸破坏环境）
