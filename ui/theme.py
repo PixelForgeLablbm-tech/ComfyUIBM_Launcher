@@ -22,6 +22,8 @@ QListWidget#sideNav::item {
     border-radius: 8px;
     margin: 2px 1px;
     color: #9aa5b8;
+    font-size: 14px;
+    font-weight: 600;
 }
 QListWidget#sideNav::item:hover {
     background: #42566e;
@@ -30,7 +32,7 @@ QListWidget#sideNav::item:hover {
 QListWidget#sideNav::item:selected {
     background: rgba(124, 92, 255, 0.16);
     color: #c4b5fd;
-    font-weight: 600;
+    font-weight: 700;
 }
 QGroupBox {
     border: 1px solid #43576f;
@@ -282,6 +284,8 @@ QListWidget#sideNav::item {
     border-radius: 8px;
     margin: 2px 1px;
     color: #6b7280;
+    font-size: 14px;
+    font-weight: 600;
 }
 QListWidget#sideNav::item:hover {
     background: #dfe2e8;
@@ -290,7 +294,7 @@ QListWidget#sideNav::item:hover {
 QListWidget#sideNav::item:selected {
     background: rgba(124, 92, 255, 0.14);
     color: #6d4bd8;
-    font-weight: 600;
+    font-weight: 700;
 }
 QGroupBox {
     border: 1px solid #d5dae1;
