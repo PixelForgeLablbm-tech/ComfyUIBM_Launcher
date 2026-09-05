@@ -50,7 +50,7 @@ def _fetch_stream(d, env, extra, progress, *flags):
         r = git_utils.run_git_stream(
             str(d), on if progress else (lambda _l: None),
             "fetch", "origin", *flags, "--progress",
-            timeout=600, env=env, extra_args=extra)
+            timeout=600, env=env, extra_args=extra, raw=True)
         return r.returncode
     except Exception as e:
         if progress:
@@ -284,7 +284,8 @@ def install_requirements(inst, mirrors: dict, progress=None):
 
     proc = git_utils.stream_command(
         [python] + args, cwd=inst.path, env=env,
-        on_line=on if progress else (lambda _l: None), timeout=3600)
+        on_line=on if progress else (lambda _l: None),
+        timeout=3600, raw=True)
     if proc.returncode != 0:
         tail = "\n".join(
             ((proc.stderr or "") or (proc.stdout or "")).strip().splitlines()[-15:])

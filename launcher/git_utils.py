@@ -20,12 +20,11 @@ def _norm_git_path(p) -> str:
     return str(p).replace("\\", "/")
 
 
-def _pump(stream, on_line, store):
+def _pump(stream, on_line, store, raw=False):
     """逐行读取子进程输出；同时处理 git 用 \\r 刷新的进度行。
 
-    - \\r 会把同一逻辑行多次刷新：只把「变化且 ≥0.25s 一次」的行交给
-      on_line，避免操作日志被刷屏；
-    - 普通换行行（pip 输出等）原样逐行回调。
+    raw=True：每一条（含 \\r 进度刷新）原样回调，不去重不限频；
+    raw=False：仅把「变化且 ≥0.25s 一次」的行交给 on_line，防止刷屏。
     """
     buf = ""
     last_text = [""]
@@ -36,14 +35,16 @@ def _pump(stream, on_line, store):
         if not piece:
             return
         store.append(piece + "\n")
-        now = time.monotonic()
-        if piece != last_text[0] and now - last_at[0] >= 0.25:
-            last_text[0] = piece
-            last_at[0] = now
-            try:
-                on_line(piece)
-            except Exception:
-                pass
+        if not raw and piece == last_text[0]:
+            return
+        if not raw and time.monotonic() - last_at[0] < 0.25:
+            return
+        last_text[0] = piece
+        last_at[0] = time.monotonic()
+        try:
+            on_line(piece)
+        except Exception:
+            pass
 
     while True:
         chunk = stream.read(4096)
@@ -70,12 +71,13 @@ def _pump(stream, on_line, store):
 
 
 def run_git_stream(cwd, on_line, *args, timeout=180, env=None,
-                   extra_args=None):
+                   extra_args=None, raw=False):
     """在 cwd 执行 git 并实时逐行回调 on_line（stdout/stderr 合并回调）。
 
     供 fetch 等耗时命令展示进度。返回 SimpleNamespace：
     returncode / stdout / stderr（stdout、stderr 仍分别累积完整文本）。
     超时抛 GitError；命令本身失败不抛异常，由调用方判断 returncode。
+    raw=True 时每条输出原样回调（不去重、不限频）。
     """
     trust = []
     if cwd:
@@ -96,10 +98,12 @@ def run_git_stream(cwd, on_line, *args, timeout=180, env=None,
     outs = []
     errs = []
     threads = [
-        threading.Thread(target=lambda: outs.append(_pump(proc.stdout, on_line, [])),
-                         daemon=True),
-        threading.Thread(target=lambda: errs.append(_pump(proc.stderr, on_line, [])),
-                         daemon=True),
+        threading.Thread(
+            target=lambda: outs.append(_pump(proc.stdout, on_line, [], raw)),
+            daemon=True),
+        threading.Thread(
+            target=lambda: errs.append(_pump(proc.stderr, on_line, [], raw)),
+            daemon=True),
     ]
     for t in threads:
         t.start()
@@ -119,10 +123,11 @@ def run_git_stream(cwd, on_line, *args, timeout=180, env=None,
                            stderr="".join(errs))
 
 
-def stream_command(cmd, cwd, on_line, env=None, timeout=180):
+def stream_command(cmd, cwd, on_line, env=None, timeout=180, raw=False):
     """执行任意命令并逐行实时回调（用于 pip install 等）。
 
     返回 SimpleNamespace(returncode / stdout / stderr)。
+    raw=True 时每条输出原样回调（不去重、不限频）。
     """
     full_env = dict(os.environ)
     if env:
@@ -139,10 +144,12 @@ def stream_command(cmd, cwd, on_line, env=None, timeout=180):
     outs = []
     errs = []
     threads = [
-        threading.Thread(target=lambda: outs.append(_pump(proc.stdout, on_line, [])),
-                         daemon=True),
-        threading.Thread(target=lambda: errs.append(_pump(proc.stderr, on_line, [])),
-                         daemon=True),
+        threading.Thread(
+            target=lambda: outs.append(_pump(proc.stdout, on_line, [], raw)),
+            daemon=True),
+        threading.Thread(
+            target=lambda: errs.append(_pump(proc.stderr, on_line, [], raw)),
+            daemon=True),
     ]
     for t in threads:
         t.start()
