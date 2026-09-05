@@ -214,20 +214,6 @@ QSystemTrayIcon { background: transparent; }
 DARK_QSS += """
 QFrame#topBar { background: #3a4e66; border-bottom: 1px solid #3a4c61; }
 QWidget#sidePanel { background: #3a4e66; }
-QFrame#appBottomBar {
-    background: #2f4154;
-    border-top: 1px solid #42566e;
-}
-QFrame#appBottomBar QLabel { color: #a3adc2; font-size: 12px; }
-QProgressBar#globalProgress {
-    background: #25374a;
-    border: 1px solid #43576f;
-    border-radius: 5px;
-}
-QProgressBar#globalProgress::chunk {
-    background: #7c5cff;
-    border-radius: 4px;
-}
 QLabel#workflowPageTitle { font-size: 20px; font-weight: 700; color: #e5defc; }
 QLabel#workflowResultState {
     color: #a3adc2; background: #35475c; border: 1px solid #465a72;
@@ -486,20 +472,6 @@ QSplitter::handle { background: #e2e5ea; }
 QSystemTrayIcon { background: transparent; }
 QFrame#topBar { background: #eceef2; border-bottom: 1px solid #e2e5ea; }
 QWidget#sidePanel { background: #eceef2; }
-QFrame#appBottomBar {
-    background: #e2e6ec;
-    border-top: 1px solid #d0d5dc;
-}
-QFrame#appBottomBar QLabel { color: #555f6d; font-size: 12px; }
-QProgressBar#globalProgress {
-    background: #f8f9fb;
-    border: 1px solid #d0d5dc;
-    border-radius: 5px;
-}
-QProgressBar#globalProgress::chunk {
-    background: #7c5cff;
-    border-radius: 4px;
-}
 QLabel#workflowPageTitle { font-size: 20px; font-weight: 700; color: #2c313a; }
 QLabel#workflowResultState {
     color: #6b7280; background: #ffffff; border: 1px solid #d5dae1;

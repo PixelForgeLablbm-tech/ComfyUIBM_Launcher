@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """主窗口：侧边栏导航 + 顶栏状态条 + 六页签 + 托盘 + 窗口状态记忆。"""
-import re
-import time
 from datetime import datetime
 
 from PyQt5.QtCore import Qt, QSettings, QTimer, pyqtSignal
@@ -9,8 +7,7 @@ from PyQt5.QtGui import QCloseEvent, QIcon, QPixmap, QTextCursor
 from PyQt5.QtWidgets import (
     QApplication, QDockWidget, QFrame, QHBoxLayout, QLabel, QListWidget,
     QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
-    QProgressBar, QPushButton, QStackedWidget, QSystemTrayIcon, QVBoxLayout,
-    QWidget,
+    QPushButton, QStackedWidget, QSystemTrayIcon, QVBoxLayout, QWidget,
 )
 
 from launcher import APP_VERSION, system_info
@@ -51,11 +48,6 @@ class MainWindow(QMainWindow):
         self.config = Config(config_path)
         self.inst_mgr = InstanceManager(self.config)
         self.tasks = TaskManager()
-        self.tasks.activity.connect(self._on_task_activity)
-        self._bar_tids = set()
-        self._bar_visible = False
-        self._bar_last_msg = ""
-        self._bar_last_t = 0.0
         self.pm = ProcessManager(self)
         self.status = {}
         self._settings = QSettings("ComfyUILauncher", "ComfyUILauncher")
@@ -98,13 +90,9 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------ 构建
     def _build_shell(self):
         central = QWidget()
-        outer = QVBoxLayout(central)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
-        root = QHBoxLayout()
+        root = QHBoxLayout(central)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
-        outer.addLayout(root, 1)
 
         # 侧边栏
         self.side = QListWidget()
@@ -170,104 +158,7 @@ class MainWindow(QMainWindow):
 
         self.side.currentRowChanged.connect(self._nav)
         self.side.setCurrentRow(0)
-        outer.addWidget(self._build_bottom_progress())
         self.setCentralWidget(central)
-
-    # ------------------------------------------------------------ 底部全局进度条
-    def _build_bottom_progress(self) -> QWidget:
-        host = QFrame()
-        host.setObjectName("appBottomBar")
-        host.setFixedHeight(36)
-        hl = QHBoxLayout(host)
-        hl.setContentsMargins(14, 0, 14, 0)
-        hl.setSpacing(10)
-        self.pbar = QProgressBar()
-        self.pbar.setObjectName("globalProgress")
-        self.pbar.setFixedSize(220, 14)
-        self.pbar.setTextVisible(False)
-        self.pbar.setRange(0, 0)                 # 默认不定（流动动画）
-        hl.addWidget(self.pbar)
-        self.lb_progress = QLabel("")
-        self.lb_progress.setProperty("dim", True)
-        hl.addWidget(self.lb_progress, 1)
-        host.setVisible(False)                   # 平时隐藏
-        self._bar_hide_timer = QTimer(self)
-        self._bar_hide_timer.setSingleShot(True)
-        self._bar_hide_timer.setInterval(600)
-        self._bar_hide_timer.timeout.connect(self._hide_progress_bar)
-        return host
-
-    # 识别进度文本里的百分比 / "xx MB / yy MB"
-    _PCT_RE = re.compile(r"(\d{1,3}(?:\.\d+)?)\s*%")
-    _SIZE_RE = re.compile(
-        r"([\d.]+)\s*([KMGT]i?B)\s*[/／]\s*([\d.]+)\s*([KMGT]i?B)",
-        re.IGNORECASE)
-    _SIZE_MUL = {"KB": 1, "MB": 2, "GB": 3, "TB": 4,
-                 "KIB": 1, "MIB": 2, "GIB": 3, "TIB": 4}
-
-    @classmethod
-    def _parse_progress(cls, msg: str):
-        """从进度文本提取百分比（0-100）；无法识别返回 None。"""
-        m = cls._PCT_RE.search(msg or "")
-        if m:
-            try:
-                return max(0, min(100, int(float(m.group(1)))))
-            except ValueError:
-                return None
-        m = cls._SIZE_RE.search(msg or "")
-        if m:
-            try:
-                mul = {k: 1024 ** v for k, v in cls._SIZE_MUL.items()}
-                cur = float(m.group(1)) * mul.get(m.group(2).upper(), 1)
-                tot = float(m.group(3)) * mul.get(m.group(4).upper(), 1)
-                if tot > 0:
-                    return max(0, min(100, int(cur * 100 / tot)))
-            except (ValueError, ZeroDivisionError):
-                return None
-        return None
-
-    def _show_progress_bar(self, msg: str):
-        if not getattr(self, "pbar", None):
-            return
-        if not self._bar_visible:
-            self._bar_visible = True
-            self._bar_hide_timer.stop()
-            self.pbar.setRange(0, 0)
-            self.pbar.setValue(0)
-            self.pbar.parentWidget().setVisible(True)   # 即底部宿主
-        now = time.monotonic()
-        if (msg == self._bar_last_msg and
-                now - self._bar_last_t < 0.15):
-            return                                  # 限频，防刷
-        self._bar_last_msg = msg
-        self._bar_last_t = now
-        self.lb_progress.setText(msg.strip()[:200])
-        pct = self._parse_progress(msg)
-        if pct is None:
-            self.pbar.setRange(0, 0)                # 不定进度动画
-            self.pbar.setValue(0)
-        else:
-            self.pbar.setRange(0, 100)
-            self.pbar.setValue(pct)
-
-    def _hide_progress_bar(self):
-        if self._bar_visible:
-            self._bar_visible = False
-            self._bar_last_msg = ""
-            try:
-                self.pbar.parentWidget().setVisible(False)
-            except Exception:
-                pass
-
-    def _on_task_activity(self, tid, kind, _payload):
-        """后台任务进度广播：底部进度条只在有真实进度消息的任务期间出现。"""
-        if kind == "progress" and isinstance(_payload, str) and _payload.strip():
-            self._bar_tids.add(tid)
-            self._show_progress_bar(_payload)
-        elif kind == "end":
-            self._bar_tids.discard(tid)
-            if not self._bar_tids:
-                self._bar_hide_timer.start()        # 稍后收起，避免闪动
 
     def _build_topbar(self, parent_layout):
         bar = QFrame()

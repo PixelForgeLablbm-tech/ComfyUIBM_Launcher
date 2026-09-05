@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """后台任务线程封装：避免阻塞 UI。"""
-import itertools
-
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 
@@ -55,43 +53,19 @@ class TaskThread(QThread):
         return self.signals.error
 
 
-class TaskManager(QObject):
-    """持有所有运行中的线程引用，避免被 GC 回收。
+class TaskManager:
+    """持有所有运行中的线程引用，避免被 GC 回收。"""
 
-    所有任务的开始/进度/结束都会广播到 activity 信号
-    (task_id, kind, payload)：kind ∈ {"start", "progress", "end"}。
-    供主窗口底部全局进度条等 UI 使用；任务自身的 on_progress 回调不受影响。
-    """
-
-    activity = pyqtSignal(int, str, object)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
         self._threads = []
         self._warn = {}            # thread -> 关闭前是否需提醒
-        self._seq = itertools.count(1)
 
     def start(self, fn, *args, on_done=None, on_error=None, on_progress=None,
               warn_on_close=True):
         """warn_on_close=False 的任务（状态轮询/版本检查等秒级任务）
         在关闭窗口时不弹"后台任务运行中"提醒。"""
-        tid = next(self._seq)
         thread = TaskThread(fn, *args)
         self._warn[thread] = bool(warn_on_close)
-
-        def _started():
-            self.activity.emit(tid, "start", None)
-        thread.started.connect(_started)
-
-        def _on_p(msg):
-            self.activity.emit(tid, "progress", msg)
-        thread.progress.connect(_on_p)
-
-        def _ended(_p=None):
-            self.activity.emit(tid, "end", None)
-        thread.done.connect(_ended)
-        thread.failed.connect(_ended)
-
         if on_progress:
             thread.progress.connect(on_progress)
         if on_done:
