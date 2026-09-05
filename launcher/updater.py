@@ -40,6 +40,24 @@ def _parse_version(name: str):
     return (int(m.group(1)), int(m.group(2)), int(m.group(3) or 0))
 
 
+def _fetch_stream(d, env, extra, progress, *flags):
+    """流式执行 git fetch（进度逐行交给 progress 回调）。返回 returncode。"""
+    def on(line):
+        if progress:
+            progress(line)
+
+    try:
+        r = git_utils.run_git_stream(
+            str(d), on if progress else (lambda _l: None),
+            "fetch", "origin", *flags, "--progress",
+            timeout=600, env=env, extra_args=extra)
+        return r.returncode
+    except Exception as e:
+        if progress:
+            progress(f"git fetch 出错：{e}")
+        return 1
+
+
 def list_versions(inst, mirrors: dict, progress=None):
     """拉取远端版本列表：发布版 tags + 主干分支。60s 缓存。"""
     d = Path(inst.path)
@@ -103,15 +121,12 @@ def list_versions(inst, mirrors: dict, progress=None):
 
     # 拉取 tag 对象（blobless 优先，失败降级），随后一条命令拿全部发布日期
     if tags:
-        fetch_ok = git_utils.run_git(
-            str(d), "fetch", "origin", "--tags", "--prune",
-            "--filter=blob:none", "--quiet", timeout=600, check=False,
-            env=env, extra_args=extra).returncode == 0
+        fetch_ok = _fetch_stream(
+            d, env, extra, progress,
+            "--tags", "--prune", "--filter=blob:none") == 0
         if not fetch_ok:
-            fetch_ok = git_utils.run_git(
-                str(d), "fetch", "origin", "--tags", "--prune", "--quiet",
-                timeout=600, check=False, env=env,
-                extra_args=extra).returncode == 0
+            fetch_ok = _fetch_stream(
+                d, env, extra, progress, "--tags", "--prune") == 0
         if fetch_ok:
             # 一条 for-each-ref 拿到所有 tag 的发布日期（替代逐 tag 跑 git log）
             dates = {}
@@ -171,16 +186,14 @@ def update_to(inst, target: str, mirrors: dict, progress=None):
     if progress:
         progress(f"正在拉取远端数据…（目标：{target}）")
     # 完整拉取优先（需要 blob 对比依赖），失败降级轻量拉取
-    fetched = git_utils.run_git(str(d), "fetch", "origin", "--tags", "--prune",
-                                timeout=600, check=False, env=env,
-                                extra_args=extra).returncode == 0
+    fetched = _fetch_stream(d, env, extra, progress,
+                            "--tags", "--prune") == 0
     if not fetched:
         if progress:
             progress("完整拉取不顺利，改用轻量拉取…")
-        fetched = git_utils.run_git(
-            str(d), "fetch", "origin", "--tags", "--prune",
-            "--filter=blob:none", timeout=600, check=False, env=env,
-            extra_args=extra).returncode == 0
+        fetched = _fetch_stream(
+            d, env, extra, progress,
+            "--tags", "--prune", "--filter=blob:none") == 0
         if not fetched:
             raise RuntimeError("拉取远端数据失败，请检查网络、代理或 GitHub 加速设置")
 
@@ -250,7 +263,10 @@ def update_comfyui(inst, mirrors: dict, progress=None):
 
 
 def install_requirements(inst, mirrors: dict, progress=None):
-    """安装 ComfyUI requirements.txt（带 PyPI 镜像 / 代理 / HF 镜像环境）。"""
+    """安装 ComfyUI requirements.txt（带 PyPI 镜像 / 代理 / HF 镜像环境）。
+
+    实时把 pip 输出（Downloading / Installing / 完成提示）逐行交给 progress。
+    """
     req = Path(inst.path) / "requirements.txt"
     if not req.exists():
         raise RuntimeError("未找到 requirements.txt")
@@ -261,12 +277,17 @@ def install_requirements(inst, mirrors: dict, progress=None):
     env.update(pip_env(mirrors))
     args = ["-m", "pip", "install"] + pip_index_args(mirrors) + \
            ["-r", str(req)]
-    proc = subprocess.run([python] + args, cwd=inst.path, env=env,
-                          capture_output=True, text=True, encoding="utf-8",
-                          errors="replace", timeout=3600,
-                          creationflags=NO_WINDOW, stdin=subprocess.DEVNULL)
+
+    def on(line):
+        if progress:
+            progress(line)
+
+    proc = git_utils.stream_command(
+        [python] + args, cwd=inst.path, env=env,
+        on_line=on if progress else (lambda _l: None), timeout=3600)
     if proc.returncode != 0:
-        tail = "\n".join((proc.stderr or "").strip().splitlines()[-15:])
+        tail = "\n".join(
+            ((proc.stderr or "") or (proc.stdout or "")).strip().splitlines()[-15:])
         raise RuntimeError(f"依赖安装失败 (exit {proc.returncode})\n{tail}")
     if progress:
         progress("依赖安装完成")

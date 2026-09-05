@@ -2,6 +2,9 @@
 """git 子进程封装（所有 git 操作统一走这里）。"""
 import os
 import subprocess
+import threading
+import time
+from types import SimpleNamespace
 from typing import Optional
 
 # Windows 下不弹出黑色控制台窗口
@@ -15,6 +18,148 @@ class GitError(RuntimeError):
 def _norm_git_path(p) -> str:
     """统一为 git 偏好的正斜杠形式（safe.directory 匹配更稳）。"""
     return str(p).replace("\\", "/")
+
+
+def _pump(stream, on_line, store):
+    """逐行读取子进程输出；同时处理 git 用 \\r 刷新的进度行。
+
+    - \\r 会把同一逻辑行多次刷新：只把「变化且 ≥0.25s 一次」的行交给
+      on_line，避免操作日志被刷屏；
+    - 普通换行行（pip 输出等）原样逐行回调。
+    """
+    buf = ""
+    last_text = [""]
+    last_at = [0.0]
+
+    def handle(piece):
+        piece = piece.strip("\r\n").strip()
+        if not piece:
+            return
+        store.append(piece + "\n")
+        now = time.monotonic()
+        if piece != last_text[0] and now - last_at[0] >= 0.25:
+            last_text[0] = piece
+            last_at[0] = now
+            try:
+                on_line(piece)
+            except Exception:
+                pass
+
+    while True:
+        chunk = stream.read(4096)
+        if not chunk:
+            break
+        buf += chunk
+        while True:
+            nl = buf.find("\n")
+            cr = buf.find("\r")
+            if nl < 0 and cr < 0:
+                break
+            if 0 <= cr and (nl < 0 or cr < nl):
+                piece, buf = buf[:cr], buf[cr + 1:]
+            else:
+                piece, buf = buf[:nl], buf[nl + 1:]
+            handle(piece)
+    if buf:
+        handle(buf)
+    try:
+        stream.close()
+    except Exception:
+        pass
+    return "".join(store)
+
+
+def run_git_stream(cwd, on_line, *args, timeout=180, env=None,
+                   extra_args=None):
+    """在 cwd 执行 git 并实时逐行回调 on_line（stdout/stderr 合并回调）。
+
+    供 fetch 等耗时命令展示进度。返回 SimpleNamespace：
+    returncode / stdout / stderr（stdout、stderr 仍分别累积完整文本）。
+    超时抛 GitError；命令本身失败不抛异常，由调用方判断 returncode。
+    """
+    trust = []
+    if cwd:
+        trust = ["-c", f"safe.directory={_norm_git_path(cwd)}"]
+    cmd = ["git"] + trust + list(extra_args or []) + list(args)
+    full_env = dict(os.environ)
+    if env:
+        full_env.update(env)
+    try:
+        proc = subprocess.Popen(
+            cmd, cwd=cwd,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", errors="replace",
+            creationflags=NO_WINDOW, stdin=subprocess.DEVNULL, env=full_env,
+        )
+    except FileNotFoundError:
+        raise GitError("未找到 git，请先安装并加入 PATH")
+    outs = []
+    errs = []
+    threads = [
+        threading.Thread(target=lambda: outs.append(_pump(proc.stdout, on_line, [])),
+                         daemon=True),
+        threading.Thread(target=lambda: errs.append(_pump(proc.stderr, on_line, [])),
+                         daemon=True),
+    ]
+    for t in threads:
+        t.start()
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        proc.wait()
+        raise GitError(f"git 命令超时: git {' '.join(args)}")
+    for t in threads:
+        t.join(timeout=2)
+    return SimpleNamespace(returncode=proc.returncode,
+                           stdout="".join(outs),
+                           stderr="".join(errs))
+
+
+def stream_command(cmd, cwd, on_line, env=None, timeout=180):
+    """执行任意命令并逐行实时回调（用于 pip install 等）。
+
+    返回 SimpleNamespace(returncode / stdout / stderr)。
+    """
+    full_env = dict(os.environ)
+    if env:
+        full_env.update(env)
+    try:
+        proc = subprocess.Popen(
+            cmd, cwd=cwd,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", errors="replace",
+            creationflags=NO_WINDOW, stdin=subprocess.DEVNULL, env=full_env,
+        )
+    except FileNotFoundError as e:
+        raise RuntimeError(f"找不到程序：{e}") from e
+    outs = []
+    errs = []
+    threads = [
+        threading.Thread(target=lambda: outs.append(_pump(proc.stdout, on_line, [])),
+                         daemon=True),
+        threading.Thread(target=lambda: errs.append(_pump(proc.stderr, on_line, [])),
+                         daemon=True),
+    ]
+    for t in threads:
+        t.start()
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        proc.wait()
+        raise RuntimeError(f"命令执行超时（>{timeout}s）：{' '.join(cmd)}")
+    for t in threads:
+        t.join(timeout=2)
+    return SimpleNamespace(returncode=proc.returncode,
+                           stdout="".join(outs),
+                           stderr="".join(errs))
 
 
 def run_git(cwd, *args, timeout=180, check=True, env=None, extra_args=None):
