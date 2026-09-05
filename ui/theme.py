@@ -18,11 +18,11 @@ QListWidget#sideNav {
     padding: 6px 2px;
 }
 QListWidget#sideNav::item {
-    padding: 9px 10px;
+    padding: 10px 10px;
     border-radius: 8px;
     margin: 2px 1px;
     color: #9aa5b8;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
 }
 QListWidget#sideNav::item:hover {
@@ -280,11 +280,11 @@ QListWidget#sideNav {
     padding: 6px 2px;
 }
 QListWidget#sideNav::item {
-    padding: 9px 10px;
+    padding: 10px 10px;
     border-radius: 8px;
     margin: 2px 1px;
     color: #6b7280;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
 }
 QListWidget#sideNav::item:hover {
