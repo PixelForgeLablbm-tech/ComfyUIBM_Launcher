@@ -303,24 +303,8 @@ class LaunchTab(QWidget):
         self.refresh_running()
 
     def stop(self):
-        def ask_foreign(pids):
-            box = QMessageBox(self)
-            box.setWindowTitle("确认停止")
-            box.setIcon(QMessageBox.Question)
-            box.setText("以下进程占用该端口，可能由网页/外部重启产生：")
-            box.setInformativeText(
-                "PID " + ", ".join(str(p) for p in pids)
-                + "\n\n确认结束这些进程吗？")
-            btn_yes = box.addButton("结束", QMessageBox.AcceptRole)
-            btn_no = box.addButton("取消", QMessageBox.RejectRole)
-            box.setDefaultButton(btn_yes)
-            box.exec_()
-            return box.clickedButton() is btn_yes
-
         try:
-            if not self.win.pm.stop(ask_foreign=ask_foreign):
-                self.win.sb("已取消停止")
-                return
+            self.win.pm.stop()
             self.win.sb("已停止")
         except Exception as e:
             self.win.log(f"停止出错: {e}")
