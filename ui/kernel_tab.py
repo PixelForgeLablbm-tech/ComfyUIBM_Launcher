@@ -108,13 +108,6 @@ class KernelTab(QWidget):
             self._un_buttons[name] = btn_un
             self._name_labels[name] = name_lb
             self._env_keys[name] = env_key
-        tip = QLabel("安装到当前实例的 Python 环境（带 PyPI 镜像 / 代理配置）。"
-                     "Torch 始终从 PyTorch 官方源安装。"
-                     "所有安装均为事务式：先预检、失败自动回滚，不会破坏原有版本。"
-                     "xformers / Triton / llama-cpp / SageAttention 可随时卸载。")
-        tip.setProperty("dim", True)
-        tip.setWordWrap(True)
-        v.addWidget(tip)
         lay.addWidget(card)
 
         # 下：左 环境识别 / 右 安装日志
