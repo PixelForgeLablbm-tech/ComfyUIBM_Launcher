@@ -13,18 +13,13 @@ from ui.dialogs import TorchInstallDialog, VersionInstallDialog, WheelInstallDia
 class KernelTab(QWidget):
     """内核维护：识别环境 / 安装 Torch、xformers、Triton、llama-cpp、SageAttention。"""
 
-    # (显示名, pip 安装规格/说明, 说明, 环境识别键)
+    # (显示名, 安装规格/说明, 右侧说明)
     ITEMS = [
-        ("Torch", "torch torchvision torchaudio",
-         "深度学习框架", "torch"),
-        ("xformers", "按已装 torch 自动匹配官方 Windows 轮子",
-         "注意力优化", "xformers"),
-        ("Triton", "-U triton-windows<3.8",
-         "GPU 编译内核", "triton"),
-        ("llama-cpp", "JamePeng CUDA 版轮子（按 CUDA/Python 匹配）",
-         "LLM 本地推理", "llama_cpp"),
-        ("SageAttention", "官方 Releases 轮子（按 torch/CUDA 匹配）",
-         "高效注意力实现", "sageattention"),
+        ("Torch", "torch torchvision torchaudio", "深度学习框架"),
+        ("xformers", "按已装 torch 自动匹配官方 Windows 轮子", "注意力优化"),
+        ("Triton", "-U triton-windows<3.8", "GPU 编译内核"),
+        ("llama-cpp", "JamePeng CUDA 版轮子（按 CUDA/Python 匹配）", "LLM 本地推理"),
+        ("SageAttention", "官方 Releases 轮子（按 torch/CUDA 匹配）", "高效注意力实现"),
     ]
 
     # 可卸载组件 → pip 包名（Torch 不加卸载，避免误卸破坏环境）
@@ -42,7 +37,6 @@ class KernelTab(QWidget):
         self._un_buttons = {}
         self._name_labels = {}
         self._name_label_texts = {}
-        self._env_keys = {}
         self._busy = False
         self._detected_uid = None     # 已成功识别环境的实例 uid
         self._pending_uid = None
@@ -69,7 +63,7 @@ class KernelTab(QWidget):
         self.btn_detect.clicked.connect(self.detect)
         hint_row.addWidget(self.btn_detect)
         v.addLayout(hint_row)
-        for name, spec, desc, env_key in self.ITEMS:
+        for name, spec, desc in self.ITEMS:
             row = QHBoxLayout()
             row.setSpacing(10)
             btn = QPushButton(f"安装 {name}")
@@ -103,11 +97,10 @@ class KernelTab(QWidget):
             elif name == "Triton":
                 btn.clicked.connect(
                     lambda _=False: self._install_triton())
-            else:
-                btn.clicked.connect(
-                    lambda _=False, s=spec, n=name: self._install(n, s))
-            name_lb = QLabel(f"<b>{name}</b>　<span style='color:#8b96a8'>{spec}</span>")
-            self._name_label_texts[name] = f"<b>{name}</b>　<span style='color:#8b96a8'>{spec}</span>"
+            name_text = (f"<b>{name}</b>　"
+                         f"<span style='color:#8b96a8'>{spec}</span>")
+            name_lb = QLabel(name_text)
+            self._name_label_texts[name] = name_text
             desc_lb = QLabel(desc)
             desc_lb.setProperty("dim", True)
             desc_lb.setAlignment(Qt.AlignCenter)   # 居中
@@ -121,7 +114,6 @@ class KernelTab(QWidget):
             self._rows[name] = btn
             self._un_buttons[name] = btn_un
             self._name_labels[name] = name_lb
-            self._env_keys[name] = env_key
         lay.addWidget(card)
 
         # 下：左 环境识别 / 右 安装日志
@@ -231,11 +223,6 @@ class KernelTab(QWidget):
             env["llama_cpp"],
         ]
         self.lb_env.setPlainText("\n".join(lines))
-        # 每行安装项显示当前已安装版本（识别后更新；名称已在按钮上，不重复）
-        for name, lb in self._name_labels.items():
-            key = self._env_keys.get(name)
-            if key and key in env:
-                lb.setText(f"<span style='color:#8b96a8'>当前版本:{env[key]}</span>")
         self.win.log("环境识别完成")
 
     def _detect_error(self, err):
@@ -277,38 +264,6 @@ class KernelTab(QWidget):
             kernel_manager.install_torch(inst, suffix, mirrors, report,
                                          version=version)
             return f"Torch 安装完成：{label}"
-
-        self.win.tasks.start(
-            work,
-            on_progress=self._append_log,
-            on_done=lambda msg: self._done(msg),
-            on_error=self._error,
-        )
-
-    def _install(self, name, spec):
-        inst = self.win.selected_instance()
-        if not inst or not inst.is_local:
-            QMessageBox.information(self, "提示", "请先在「实例管理」中选择一个本地实例")
-            return
-        if self.win.pm.is_running():
-            QMessageBox.warning(self, "提示", "请先停止正在运行的 ComfyUI 再安装内核组件")
-            return
-        # 与其它内核安装一致：先确认再安装，避免误点直接开装
-        ret = QMessageBox.question(
-            self, "确认安装",
-            f"即将安装 {name}（{spec}）。\n\n"
-            "安装带预检 + 装后验证 + 失败自动回滚，不会破坏原有版本。\n\n"
-            "确定开始吗？",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if ret != QMessageBox.Yes:
-            return
-        self._set_busy(True)
-        self.log.clear()
-        mirrors = dict(self.win.config.mirrors)
-
-        def work(report):
-            kernel_manager.install_package(inst, spec, mirrors, report)
-            return f"安装完成：{name}"
 
         self.win.tasks.start(
             work,
