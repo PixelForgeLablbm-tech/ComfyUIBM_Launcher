@@ -44,13 +44,11 @@ class KernelTab(QWidget):
         self.win = win
         self._rows = {}
         self._un_buttons = {}
-        self._name_labels = {}
-        self._name_label_texts = {}
+        self._version_labels = {}      # 组件名 → 版本显示 QLabel
         self._busy = False
         self._detected_uid = None     # 已成功识别环境的实例 uid
         self._pending_uid = None
         self._build()
-        self._set_name_labels(False)  # 初始：未识别，不显示名称+规格列
 
     # ------------------------------------------------------------ UI
     def _build(self):
@@ -79,6 +77,7 @@ class KernelTab(QWidget):
             btn.setObjectName("primary")
             btn.setFixedHeight(34)
             btn.setMinimumWidth(140)
+            btn.setToolTip(spec)      # 规格信息悬停可见
             if name in self.UNINSTALL_NAMES:
                 btn_un = QPushButton("卸载")
                 btn_un.setObjectName("ghost")
@@ -106,10 +105,8 @@ class KernelTab(QWidget):
             elif name == "Triton":
                 btn.clicked.connect(
                     lambda _=False: self._install_triton())
-            name_text = (f"<b>{name}</b>　"
-                         f"<span style='color:#8b96a8'>{spec}</span>")
-            name_lb = QLabel(name_text)
-            self._name_label_texts[name] = name_text
+            ver_lb = QLabel("")
+            ver_lb.setAlignment(Qt.AlignLeft)
             desc_lb = QLabel(desc)
             desc_lb.setProperty("dim", True)
             desc_lb.setAlignment(Qt.AlignCenter)   # 居中
@@ -117,12 +114,12 @@ class KernelTab(QWidget):
             row.addWidget(btn)
             if btn_un:
                 row.addWidget(btn_un)
-            row.addWidget(name_lb, 1)
+            row.addWidget(ver_lb, 1)               # 中间：版本显示（识别后填充）
             row.addWidget(desc_lb)                 # 不加伸缩 → 固定在右端
             v.addLayout(row)
             self._rows[name] = btn
             self._un_buttons[name] = btn_un
-            self._name_labels[name] = name_lb
+            self._version_labels[name] = ver_lb
         lay.addWidget(card)
 
         # 下：左 环境识别 / 右 安装日志
@@ -151,13 +148,10 @@ class KernelTab(QWidget):
         lay.addLayout(bottom, 1)
 
     # ------------------------------------------------------------ 数据
-    def _set_name_labels(self, visible: bool):
-        """未识别时清空文字（保留弹性位，按钮与说明位置不变）。"""
-        for name, lb in self._name_labels.items():
-            if visible:
-                lb.setText(self._name_label_texts.get(name, ""))
-            else:
-                lb.setText("")
+    def _clear_versions(self):
+        """清空中间版本列（未识别/换实例/重新识别时）。"""
+        for lb in self._version_labels.values():
+            lb.setText("")
 
     def reload(self):
         inst = self.win.selected_instance()
@@ -166,7 +160,7 @@ class KernelTab(QWidget):
             self.btn_detect.setEnabled(False)
             for btn in self._rows.values():
                 btn.setEnabled(False)
-            self._set_name_labels(False)
+            self._clear_versions()
             return
         text = f"实例：{inst.name}　{inst.path}"
         self.lb_hint.setText(text)
@@ -175,9 +169,9 @@ class KernelTab(QWidget):
         self.btn_detect.setEnabled(True)
         for btn in self._rows.values():
             btn.setEnabled(True)
-        # 换实例后需重新识别才显示名称+规格列
+        # 换实例后需重新识别才显示版本
         if self._detected_uid != inst.uid:
-            self._set_name_labels(False)
+            self._clear_versions()
 
     def detect(self):
         """后台识别环境并显示到左侧面板。"""
@@ -189,7 +183,7 @@ class KernelTab(QWidget):
         self.btn_detect.setText("识别中…")
         self.lb_env.setPlainText("识别中…")
         self._pending_uid = inst.uid
-        self._set_name_labels(False)   # 重新识别期间不显示
+        self._clear_versions()          # 重新识别期间版本列清空
 
         self.win.tasks.start(
             lambda report, i=inst: kernel_manager.detect_environment(i, report),
@@ -233,12 +227,11 @@ class KernelTab(QWidget):
         ]
         self.lb_env.setPlainText("\n".join(lines))
         # 中间列显示各组件已装版本（识别后）
-        for name, lb in self._name_labels.items():
+        for name, lb in self._version_labels.items():
             key = self.ENV_KEYS.get(name)
             if key and key in env:
                 lb.setText(f"<span style='color:#8b96a8'>{env[key]}</span>")
-            else:
-                lb.setText("")
+        self._detected_uid = self._pending_uid
         self.win.log("环境识别完成")
 
     def _detect_error(self, err):
