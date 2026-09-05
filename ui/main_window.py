@@ -103,10 +103,10 @@ class MainWindow(QMainWindow):
             ("实例管理", 1),
             ("模型管理", 2),
             ("插件管理", 3),
-            ("工作流识别", 4),
-            ("更新维护", 5),
-            ("内核维护", 6),
-            ("文件管理", 7),
+            ("更新维护", 4),
+            ("内核维护", 5),
+            ("文件管理", 6),
+            ("工作流识别", 7),
             ("设置", 8),
         ]
         for label, idx in items:
@@ -150,8 +150,8 @@ class MainWindow(QMainWindow):
         self.files_tab = FilesTab(self)
         self.settings_tab = SettingsTab(self)
         for tab in (self.launch_tab, self.instances_tab, self.models_tab,
-                    self.plugins_tab, self.workflow_tab, self.update_tab,
-                    self.kernel_tab, self.files_tab, self.settings_tab):
+                    self.plugins_tab, self.update_tab, self.kernel_tab,
+                    self.files_tab, self.workflow_tab, self.settings_tab):
             self.stack.addWidget(tab)
         rl.addWidget(self.stack, 1)
         root.addWidget(right, 1)
