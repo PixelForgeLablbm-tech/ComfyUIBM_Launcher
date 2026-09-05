@@ -199,7 +199,6 @@ class KernelTab(QWidget):
         self.btn_detect.setEnabled(True)
         self.btn_detect.setText("重新识别")
         self._detected_uid = self._pending_uid
-        self._set_name_labels(True)      # 识别成功：显示名称+规格列
         lines = [
             "获取当前显卡型号:",
             env["gpu"],
