@@ -43,7 +43,10 @@ class KernelTab(QWidget):
         self._name_labels = {}
         self._env_keys = {}
         self._busy = False
+        self._detected_uid = None     # 已成功识别环境的实例 uid
+        self._pending_uid = None
         self._build()
+        self._set_name_labels(False)  # 初始：未识别，不显示名称+规格列
 
     # ------------------------------------------------------------ UI
     def _build(self):
@@ -157,7 +160,7 @@ class KernelTab(QWidget):
             self.btn_detect.setEnabled(False)
             for btn in self._rows.values():
                 btn.setEnabled(False)
-            self._set_name_labels(False)      # 无实例：不显示 名称+规格
+            self._set_name_labels(False)
             return
         text = f"实例：{inst.name}　{inst.path}"
         self.lb_hint.setText(text)
@@ -166,7 +169,9 @@ class KernelTab(QWidget):
         self.btn_detect.setEnabled(True)
         for btn in self._rows.values():
             btn.setEnabled(True)
-        self._set_name_labels(True)          # 有实例：显示 名称+规格
+        # 换实例后需重新识别才显示名称+规格列
+        if self._detected_uid != inst.uid:
+            self._set_name_labels(False)
 
     def detect(self):
         """后台识别环境并显示到左侧面板。"""
@@ -177,6 +182,8 @@ class KernelTab(QWidget):
         self.btn_detect.setEnabled(False)
         self.btn_detect.setText("识别中…")
         self.lb_env.setPlainText("识别中…")
+        self._pending_uid = inst.uid
+        self._set_name_labels(False)   # 重新识别期间不显示
 
         self.win.tasks.start(
             lambda report, i=inst: kernel_manager.detect_environment(i, report),
@@ -191,6 +198,8 @@ class KernelTab(QWidget):
     def _show_env(self, env):
         self.btn_detect.setEnabled(True)
         self.btn_detect.setText("重新识别")
+        self._detected_uid = self._pending_uid
+        self._set_name_labels(True)      # 识别成功：显示名称+规格列
         lines = [
             "获取当前显卡型号:",
             env["gpu"],
