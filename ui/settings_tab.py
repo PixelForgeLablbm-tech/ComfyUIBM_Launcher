@@ -131,10 +131,17 @@ class SettingsTab(QWidget):
         btn_decl = QPushButton("声明")
         btn_decl.setObjectName("ghost")
         btn_decl.clicked.connect(self.win.show_declaration)
+        self.btn_gc = QPushButton("仓库瘦身")
+        self.btn_gc.setObjectName("ghost")
+        self.btn_gc.setToolTip(
+            "对当前实例的 .git 执行 git gc --prune=now，回收历史对象占用的空间；\n"
+            "不影响任何 tag 版本、当前代码与后续更新/回滚。")
+        self.btn_gc.clicked.connect(self.repo_gc)
         row = QHBoxLayout()
         row.addWidget(btn_log)
         row.addWidget(self.btn_update)
         row.addWidget(btn_decl)
+        row.addWidget(self.btn_gc)
         row.addStretch(1)
         g3_lay.addLayout(row)
         ml.addWidget(g3)
@@ -274,6 +281,64 @@ class SettingsTab(QWidget):
         self.win.config.settings["theme"] = theme
         self.win.config.save()
         self.win.set_theme(theme)
+
+    def repo_gc(self):
+        """对当前实例执行 git gc --prune=now（仓库瘦身）。
+
+        只整理 .git（压缩对象、清理不可达对象），不动工作区与任何 tag 版本。
+        """
+        from PyQt5.QtWidgets import QMessageBox
+        from launcher import git_utils
+
+        inst = self.win.selected_instance()
+        if not inst or not inst.is_local:
+            QMessageBox.warning(self, "提示", "请先在「实例管理」中选择一个本地实例")
+            return
+        git_dir = Path(inst.path) / ".git"
+        if not git_dir.exists():
+            QMessageBox.information(self, "提示", "该实例不是 git 安装，无需瘦身")
+            return
+
+        def dir_size(p: Path) -> int:
+            total = 0
+            for dp, _dirs, files in os.walk(str(p)):
+                for f in files:
+                    try:
+                        total += Path(dp, f).lstat().st_size
+                    except OSError:
+                        pass
+            return total
+
+        self.btn_gc.setEnabled(False)
+        self.btn_gc.setText("整理中…")
+        before = dir_size(git_dir)
+
+        def work(report):
+            report("正在整理 git 仓库（git gc --prune=now），可能需要几分钟…")
+            r = git_utils.run_git_stream(
+                str(Path(inst.path)), lambda l: report(l),
+                "gc", "--prune=now", timeout=1800)
+            if r.returncode != 0:
+                raise RuntimeError((r.stderr or r.stdout or "git gc 失败").strip())
+            report("正在统计回收空间…")
+            return dir_size(git_dir)
+
+        def done(after):
+            self.btn_gc.setEnabled(True)
+            self.btn_gc.setText("仓库瘦身")
+            saved = before - after
+            text = (f"瘦身完成，回收约 {saved / 1048576:.1f} MB。"
+                    if saved > 0 else
+                    "瘦身完成，仓库已经比较整洁，未回收明显空间。")
+            QMessageBox.information(self, "仓库瘦身", text)
+            self.win.log(f"仓库瘦身完成（{text}）")
+
+        def fail(err):
+            self.btn_gc.setEnabled(True)
+            self.btn_gc.setText("仓库瘦身")
+            QMessageBox.critical(self, "仓库瘦身失败", str(err))
+
+        self.win.tasks.start(work, on_done=done, on_error=fail)
 
     def check_update(self):
         """检查启动器自身是否有新版本（GitHub Releases）。"""
