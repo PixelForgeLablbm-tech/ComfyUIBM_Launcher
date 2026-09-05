@@ -370,10 +370,9 @@ class UpdateTab(QWidget):
         self._op(f"════════ ✅ {msg} ════════")
         QMessageBox.information(self, "完成", msg or ok_msg)
         self._info = None
+        # 更新/回滚完成：只刷新左上角「当前版本」显示；版本列表不自动重新拉取
+        # （需要时手动点「刷新版本列表」，Tags 的「当前」标记会跟进新版本）
         self._load_version_text()
-        # 更新/回滚完成：强制刷新版本列表，让 Tags 的「当前」标记跟进新版本
-        updater._VERSION_CACHE.update(key=None, at=0.0, info=None)
-        self.refresh_versions()
 
     def _op_error(self, err):
         self._set_buttons_enabled(True)
