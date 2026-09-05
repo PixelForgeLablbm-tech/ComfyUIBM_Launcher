@@ -145,6 +145,11 @@ class KernelTab(QWidget):
         lay.addLayout(bottom, 1)
 
     # ------------------------------------------------------------ 数据
+    def _set_name_labels(self, visible: bool):
+        """有无实例时切换中间"名称+规格"列的显示。"""
+        for lb in self._name_labels.values():
+            lb.setVisible(visible)
+
     def reload(self):
         inst = self.win.selected_instance()
         if not inst or not inst.is_local:
@@ -152,6 +157,7 @@ class KernelTab(QWidget):
             self.btn_detect.setEnabled(False)
             for btn in self._rows.values():
                 btn.setEnabled(False)
+            self._set_name_labels(False)      # 无实例：不显示 名称+规格
             return
         text = f"实例：{inst.name}　{inst.path}"
         self.lb_hint.setText(text)
@@ -160,6 +166,7 @@ class KernelTab(QWidget):
         self.btn_detect.setEnabled(True)
         for btn in self._rows.values():
             btn.setEnabled(True)
+        self._set_name_labels(True)          # 有实例：显示 名称+规格
 
     def detect(self):
         """后台识别环境并显示到左侧面板。"""
