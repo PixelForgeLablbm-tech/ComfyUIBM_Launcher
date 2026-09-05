@@ -157,13 +157,6 @@ class WorkflowTab(QWidget):
         heading.setObjectName("workflowPaneTitle")
         head.addWidget(heading)
         head.addStretch(1)
-        if missing:
-            self.btn_copy_all = QPushButton("复制全部")
-            self.btn_copy_all.setObjectName("ghost")
-            self.btn_copy_all.setFixedHeight(28)
-            self.btn_copy_all.setEnabled(False)
-            self.btn_copy_all.clicked.connect(self._copy_all_missing)
-            head.addWidget(self.btn_copy_all)
         pane_lay.addLayout(head)
 
         tip = QLabel(subtitle)
@@ -253,7 +246,6 @@ class WorkflowTab(QWidget):
         self.lb_unmapped.clear()
         self.unmapped_box.setVisible(False)
         self._set_status("正在识别…", "busy")
-        self.btn_copy_all.setEnabled(False)
         self.btn_pick.setEnabled(False)
         self.btn_reanalyze.setEnabled(False)
 
@@ -266,7 +258,6 @@ class WorkflowTab(QWidget):
             installed = result["installed"]
             self.btn_pick.setEnabled(True)
             self.btn_reanalyze.setEnabled(True)
-            self.btn_copy_all.setEnabled(bool(missing))
             self.list_installed.clear()
             self.list_missing.clear()
             self._set_counts(len(missing), len(installed))
@@ -352,19 +343,6 @@ class WorkflowTab(QWidget):
     def _copy_text(self, text):
         QApplication.clipboard().setText(text)
         self.win.sb(f"已复制：{text}")
-
-    def _copy_all_missing(self):
-        names = [self.list_missing.item(i).data(Qt.UserRole)
-                 for i in range(self.list_missing.count())]
-        names = [name for name in names if name]
-        if not names:
-            return
-        QApplication.clipboard().setText("\n".join(names))
-        self.win.sb(f"已复制 {len(names)} 个未安装插件名")
-        QMessageBox.information(
-            self, "已复制",
-            f"已复制 {len(names)} 个插件名：\n\n" + "\n".join(names) +
-            "\n\n粘贴到“插件管理 → 插件搜索”逐个搜索安装。")
 
     # ------------------------------------------------------------ 数据
     def reload(self):
