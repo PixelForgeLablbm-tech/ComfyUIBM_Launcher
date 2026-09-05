@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """内核维护页签：环境识别（左）+ 内核组件安装（右）。"""
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QGroupBox, QHBoxLayout, QLabel, QMessageBox, QPlainTextEdit,
     QPushButton, QVBoxLayout, QWidget,
@@ -104,11 +105,13 @@ class KernelTab(QWidget):
             name_lb = QLabel(f"<b>{name}</b>　<span style='color:#8b96a8'>{spec}</span>")
             desc_lb = QLabel(desc)
             desc_lb.setProperty("dim", True)
+            desc_lb.setAlignment(Qt.AlignCenter)   # 居中
+            desc_lb.setFixedWidth(110)             # 固定在最右侧一列
             row.addWidget(btn)
             if btn_un:
                 row.addWidget(btn_un)
             row.addWidget(name_lb, 1)
-            row.addWidget(desc_lb, 1)
+            row.addWidget(desc_lb)                 # 不加伸缩 → 固定在右端
             v.addLayout(row)
             self._rows[name] = btn
             self._un_buttons[name] = btn_un
