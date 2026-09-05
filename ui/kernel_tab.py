@@ -148,8 +148,10 @@ class KernelTab(QWidget):
             for btn in self._rows.values():
                 btn.setEnabled(False)
             return
-        self.lb_hint.setText(
-            f"实例：{inst.name}\n{inst.path}")
+        text = f"实例：{inst.name}　{inst.path}"
+        self.lb_hint.setText(text)
+        self.lb_hint.setToolTip(text)      # 完整路径悬停可见
+        self.lb_hint.setWordWrap(False)    # 单行不换行
         self.btn_detect.setEnabled(True)
         for btn in self._rows.values():
             btn.setEnabled(True)
