@@ -41,6 +41,7 @@ class KernelTab(QWidget):
         self._rows = {}
         self._un_buttons = {}
         self._name_labels = {}
+        self._name_label_texts = {}
         self._env_keys = {}
         self._busy = False
         self._detected_uid = None     # 已成功识别环境的实例 uid
@@ -106,6 +107,7 @@ class KernelTab(QWidget):
                 btn.clicked.connect(
                     lambda _=False, s=spec, n=name: self._install(n, s))
             name_lb = QLabel(f"<b>{name}</b>　<span style='color:#8b96a8'>{spec}</span>")
+            self._name_label_texts[name] = f"<b>{name}</b>　<span style='color:#8b96a8'>{spec}</span>"
             desc_lb = QLabel(desc)
             desc_lb.setProperty("dim", True)
             desc_lb.setAlignment(Qt.AlignCenter)   # 居中
@@ -149,9 +151,12 @@ class KernelTab(QWidget):
 
     # ------------------------------------------------------------ 数据
     def _set_name_labels(self, visible: bool):
-        """有无实例时切换中间"名称+规格"列的显示。"""
-        for lb in self._name_labels.values():
-            lb.setVisible(visible)
+        """未识别时清空文字（保留弹性位，按钮与说明位置不变）。"""
+        for name, lb in self._name_labels.items():
+            if visible:
+                lb.setText(self._name_label_texts.get(name, ""))
+            else:
+                lb.setText("")
 
     def reload(self):
         inst = self.win.selected_instance()
