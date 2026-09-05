@@ -292,7 +292,10 @@ class UpdateTab(QWidget):
             self.lb_version.setText(info["current"])
         self._fill_lists()
         self._update_selected_label()
-        if not info.get("tags"):
+        n = len(info.get("tags") or [])
+        if n:
+            self._op(f"✅ 查询完成：共拉取到 {n} 个版本")
+        else:
             self._op("未获取到版本列表。请检查：网络连接 / 设置页的代理 / GitHub 加速。")
 
     def _versions_error(self, err):
