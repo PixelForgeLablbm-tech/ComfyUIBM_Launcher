@@ -70,15 +70,14 @@ class KernelTab(QWidget):
         self.btn_detect.clicked.connect(self.detect)
         hint_row.addWidget(self.btn_detect)
         v.addLayout(hint_row)
-        # 按钮宽度按最长文字自适应（统一宽度，保证版本列对齐且文字不被截断）
-        from PyQt5.QtGui import QFontMetrics
-        fm = QFontMetrics(self.font())
-        btn_w = max(140, max(fm.horizontalAdvance(f"安装 {n}") + 30
-                             for n, _s, _d in self.ITEMS))
+        # 按钮保持统一紧凑宽度(140)，不因最长文字而撑宽；放不下时缩小按钮字号
+        btn_w = 140
+        install_buttons = []
         for name, spec, desc in self.ITEMS:
             row = QHBoxLayout()
             row.setSpacing(10)
             btn = QPushButton(f"安装 {name}")
+            install_buttons.append(btn)
             btn.setObjectName("primary")
             btn.setFixedHeight(34)
             btn.setFixedWidth(btn_w)
@@ -129,6 +128,26 @@ class KernelTab(QWidget):
             self._rows[name] = btn
             self._un_buttons[name] = track_un      # 卸载按钮或 None
             self._version_labels[name] = ver_lb
+        # 按钮统一宽 140；最长文字（安装 SageAttention）放不下时缩小按钮字号
+        # （qss 把按钮字号钉在 13px 且 padding 14+14px，需用内联样式逐像素调小）
+        from PyQt5.QtGui import QFont, QFontMetrics
+        content_w = btn_w - 32          # 140 - (padding 14+14 + 边框2) - 余量2
+        base_f = QFont(self.font())
+        base_f.setPixelSize(13)         # 与 qss font-size:13px 一致
+        longest = max((f"安装 {n}" for n, _s, _d in self.ITEMS),
+                      key=lambda t: QFontMetrics(base_f).horizontalAdvance(t))
+        best = 13
+        px = 13
+        while px >= 7:
+            f = QFont(base_f)
+            f.setPixelSize(px)
+            if QFontMetrics(f).horizontalAdvance(longest) <= content_w:
+                best = px
+                break
+            px -= 1
+        if best < 13:
+            for b in install_buttons:
+                b.setStyleSheet(f"font-size: {best}px;")
         lay.addWidget(card)
 
         # 下：左 环境识别 / 右 安装日志
