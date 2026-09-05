@@ -59,14 +59,6 @@ class SettingsTab(QWidget):
             self.cb_dpi.addItem(label, val)
         f.addRow("DPI 缩放:", self.cb_dpi)
         g1_lay.addLayout(f)
-        tip_dpi = QLabel("选择后自动保存，重启启动器后生效；若缩放过大导致窗口超出屏幕，会自动恢复。")
-        tip_dpi.setProperty("dim", True)
-        tip_dpi.setWordWrap(True)
-        g1_lay.addWidget(tip_dpi)
-        tip_tray = QLabel("点窗口 × 会直接退出软件，并自动停止正在运行的 ComfyUI（不留后台）。")
-        tip_tray.setProperty("dim", True)
-        tip_tray.setWordWrap(True)
-        g1_lay.addWidget(tip_tray)
         ml.addWidget(g1)
 
         # ---------------- 网络 ----------------
@@ -116,17 +108,7 @@ class SettingsTab(QWidget):
         self.ed_gh_custom.returnPressed.connect(self._save_gh_custom)
         gh_row.addWidget(self.ed_gh_custom)
         gh_lay.addLayout(gh_row)
-        gh_tip = QLabel(
-            "对本启动器的 ComfyUI / 插件克隆、拉取和版本查询生效；"
-            "不修改全局 Git 配置。加速失效时可切换镜像或关闭直连。")
-        gh_tip.setProperty("dim", True)
-        gh_tip.setWordWrap(True)
-        gh_lay.addWidget(gh_tip)
         g2_lay.addWidget(gh_panel)
-        tip = QLabel("代理与镜像仅对本启动器发起的 git / pip 命令生效，不影响系统全局。")
-        tip.setProperty("dim", True)
-        tip.setWordWrap(True)
-        g2_lay.addWidget(tip)
         ml.addWidget(g2)
 
         # ---------------- 应用信息 ----------------
