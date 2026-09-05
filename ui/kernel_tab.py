@@ -30,6 +30,15 @@ class KernelTab(QWidget):
         "SageAttention": ["sageattention"],
     }
 
+    # 组件 → 环境识别结果里的键（识别后中间列显示对应已装版本）
+    ENV_KEYS = {
+        "Torch": "torch",
+        "xformers": "xformers",
+        "Triton": "triton",
+        "llama-cpp": "llama_cpp",
+        "SageAttention": "sageattention",
+    }
+
     def __init__(self, win, parent=None):
         super().__init__(parent)
         self.win = win
@@ -223,6 +232,13 @@ class KernelTab(QWidget):
             env["llama_cpp"],
         ]
         self.lb_env.setPlainText("\n".join(lines))
+        # 中间列显示各组件已装版本（识别后）
+        for name, lb in self._name_labels.items():
+            key = self.ENV_KEYS.get(name)
+            if key and key in env:
+                lb.setText(f"<span style='color:#8b96a8'>{env[key]}</span>")
+            else:
+                lb.setText("")
         self.win.log("环境识别完成")
 
     def _detect_error(self, err):
