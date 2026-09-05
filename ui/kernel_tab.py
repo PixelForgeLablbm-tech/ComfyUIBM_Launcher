@@ -70,13 +70,18 @@ class KernelTab(QWidget):
         self.btn_detect.clicked.connect(self.detect)
         hint_row.addWidget(self.btn_detect)
         v.addLayout(hint_row)
+        # 按钮宽度按最长文字自适应（统一宽度，保证版本列对齐且文字不被截断）
+        from PyQt5.QtGui import QFontMetrics
+        fm = QFontMetrics(self.font())
+        btn_w = max(140, max(fm.horizontalAdvance(f"安装 {n}") + 30
+                             for n, _s, _d in self.ITEMS))
         for name, spec, desc in self.ITEMS:
             row = QHBoxLayout()
             row.setSpacing(10)
             btn = QPushButton(f"安装 {name}")
             btn.setObjectName("primary")
             btn.setFixedHeight(34)
-            btn.setFixedWidth(140)
+            btn.setFixedWidth(btn_w)
             btn.setToolTip(spec)      # 规格信息悬停可见
             un_btn = QPushButton("卸载")
             un_btn.setObjectName("ghost")
