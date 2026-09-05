@@ -278,10 +278,24 @@ class LaunchTab(QWidget):
             QMessageBox.warning(self, "提示", "远程实例无法在本机启动")
             return
         self._save()
+        cfg = self.win.config.launch
+        port = int(cfg.get("port", 8188))
+        # 端口被非本启动器进程占用：先弹窗确认是否结束占用
+        blocker = self.win.pm.port_blocker(inst, cfg)
+        if blocker:
+            ret = QMessageBox.question(
+                self, "端口被占用",
+                f"端口 {port} 正被 PID {blocker} 监听（不是由本启动器启动的进程）。\n\n"
+                "结束该进程并继续启动吗？",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+            if ret != QMessageBox.Yes:
+                self.win.sb("已取消启动")
+                return
+            self.win.pm.kill_pid_tree(blocker)
+            self.win.log(f"已结束占用端口的进程 PID {blocker}")
         self.win.log(f"准备启动 {inst.name} …")
         try:
-            info = self.win.pm.launch(inst, self.win.config.launch,
-                                      self.win.config.mirrors)
+            info = self.win.pm.launch(inst, cfg, self.win.config.mirrors)
             self.win.sb(f"已启动 {inst.name} (PID {info['pid']})")
         except Exception as e:
             QMessageBox.critical(self, "启动失败", str(e))
@@ -289,8 +303,24 @@ class LaunchTab(QWidget):
         self.refresh_running()
 
     def stop(self):
+        def ask_foreign(pids):
+            box = QMessageBox(self)
+            box.setWindowTitle("确认停止")
+            box.setIcon(QMessageBox.Question)
+            box.setText("以下进程占用该端口，可能由网页/外部重启产生：")
+            box.setInformativeText(
+                "PID " + ", ".join(str(p) for p in pids)
+                + "\n\n确认结束这些进程吗？")
+            btn_yes = box.addButton("结束", QMessageBox.AcceptRole)
+            btn_no = box.addButton("取消", QMessageBox.RejectRole)
+            box.setDefaultButton(btn_yes)
+            box.exec_()
+            return box.clickedButton() is btn_yes
+
         try:
-            self.win.pm.stop()
+            if not self.win.pm.stop(ask_foreign=ask_foreign):
+                self.win.sb("已取消停止")
+                return
             self.win.sb("已停止")
         except Exception as e:
             self.win.log(f"停止出错: {e}")
@@ -314,7 +344,8 @@ class LaunchTab(QWidget):
             uptime = (f"{h}时{m}分{s}秒" if h else
                       (f"{m}分{s}秒" if m else f"{s}秒"))
             self.lb_run.setProperty("ok", True)
-            self.lb_run.setText(f"运行中 (PID {info['pid']}) · {uptime}")
+            note = "（已被网页/外部重启接管）" if info.get("adopted") else ""
+            self.lb_run.setText(f"运行中 (PID {info['pid']}) · {uptime}{note}")
             # 地址框：可选中复制
             self.ed_url.setText(info["url"])
             self.ed_url.setVisible(True)
